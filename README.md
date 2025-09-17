@@ -64,30 +64,48 @@ src/
 
 ## Deployment
 
-This app is configured for deployment to GitHub Pages using GitHub Actions.
+This app is deployed to GitHub Pages using a dedicated `gh-pages` branch for reliable static hosting.
 
-### Automatic Deployment
-1. Push changes to the `main` branch
-2. GitHub Actions will automatically build and deploy the app
-3. App will be available at: `https://palmermarc.github.io/MWIMarketplaceUpgradeFinder/`
+### Deployment Method
+- **Source**: `gh-pages` branch (static files only)
+- **Build**: Next.js static export (`npm run export`)
+- **Assets**: All CSS, JS, and fonts served from GitHub Pages CDN
 
-### Manual Deployment
+### Manual Deployment Process
 ```bash
-# Build the static export
+# 1. Build the static export
 npm run export
 
-# Or use the deployment script
+# 2. Switch to gh-pages branch
+git checkout gh-pages
+
+# 3. Replace content with new build
+rm -rf * && cp -r out/* . && touch .nojekyll
+
+# 4. Commit and push
+git add . && git commit -m "Deploy latest build"
+git push origin gh-pages
+
+# 5. Switch back to main
+git checkout main
+```
+
+### Or use the deployment script
+```bash
 ./deploy.sh
 ```
 
 ### GitHub Pages Setup
 1. Go to repository Settings → Pages
-2. Set Source to "GitHub Actions"
-3. The workflow will handle the rest automatically
+2. Set Source to "Deploy from a branch"
+3. Select branch: `gh-pages`
+4. Select folder: `/ (root)`
 
 ## Live Demo
 
 🌐 **[Try the app live](https://palmermarc.github.io/MWIMarketplaceUpgradeFinder/)**
+
+*Note: All assets (CSS, JavaScript, fonts) now load correctly from the GitHub Pages CDN.*
 
 ## Contributing
 
