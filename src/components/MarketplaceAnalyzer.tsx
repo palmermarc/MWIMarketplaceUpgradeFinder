@@ -226,7 +226,7 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
                           {upgrade.currentItem.itemName} +{upgrade.currentItem.enhancementLevel} → {upgrade.suggestedUpgrade.itemName} +{upgrade.suggestedUpgrade.enhancementLevel}
                         </p>
                         <p className="text-gray-400 text-xs mt-1">
-                          Cost efficiency: {upgrade.costEfficiency.toFixed(0)} coins/level
+                          Cost efficiency: {upgrade.costEfficiency.toFixed(0).toLocaleString()} coins/level
                         </p>
                       </div>
                     </div>
@@ -242,7 +242,7 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
                         onClick={() => toggleVariants(index)}
                         className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
                       >
-                        {expandedVariants.has(index) ? '▼' : '▶'} See other variants ({upgrade.allVariants.length})
+                        {expandedVariants.has(index) ? '▼' : '▶'} See all variants ({upgrade.allVariants.length})
                       </button>
 
                       {expandedVariants.has(index) && (
@@ -261,7 +261,7 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
                                     {variant.itemName} +{variant.enhancementLevel}
                                   </p>
                                   <p className="text-gray-400 text-xs">
-                                    +{variant.improvement.increase} levels • {variant.costPerLevel.toFixed(0)} coins/level
+                                    +{variant.improvement.increase} levels • {variant.costPerLevel.toFixed(0).toLocaleString()} coins/level
                                   </p>
                                 </div>
                               </div>
