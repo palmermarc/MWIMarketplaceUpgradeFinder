@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Milky Way Idle Marketplace Upgrade Finder
+
+A Next.js application that helps Milky Way Idle players find optimal equipment upgrades from the marketplace data. Simply import your character data and the app will automatically fetch the latest marketplace prices to suggest the best upgrade opportunities.
+
+## Features
+
+- **Character Import**: Paste your character JSON data for instant analysis
+- **Automatic Marketplace Data**: Fetches real-time pricing from the official API
+- **Smart Caching**: Stores marketplace data locally with timestamp-based updates
+- **Upgrade Analysis**: Finds cost-effective enhancement opportunities
+- **Data Export**: Export combined character and upgrade data for combat simulation apps
 
 ## Getting Started
 
-First, run the development server:
-
+1. **Install dependencies**:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Run the development server**:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Open your browser**: Navigate to [http://localhost:3000](http://localhost:3000)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How to Use
 
-## Learn More
+1. **Export your character data** from Milky Way Idle game
+2. **Paste the JSON** into the character import field
+3. **Click "Import Character"** - marketplace data loads automatically
+4. **Review upgrade opportunities** sorted by cost efficiency
+5. **Export the data** for use in combat simulation tools
 
-To learn more about Next.js, take a look at the following resources:
+## Technology Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **LocalStorage API** - Client-side data caching
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data Sources
 
-## Deploy on Vercel
+- Character data: User-provided JSON export from Milky Way Idle
+- Marketplace data: `https://www.milkywayidle.com/game_data/marketplace.json`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/                 # Next.js App Router pages
+├── components/          # React components
+├── services/           # API and data services
+└── types/              # TypeScript type definitions
+```
+
+## Development
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run start` - Start production server
+
+## Contributing
+
+This project was built to automate the process of finding equipment upgrades in Milky Way Idle. Feel free to submit issues or pull requests for improvements.
