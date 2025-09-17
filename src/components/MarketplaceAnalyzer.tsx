@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MarketData, AuctionItem, ItemAnalysis, UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
+import { ItemIcon } from './ItemIcon';
 
 interface MarketplaceAnalyzerProps {
   character: CharacterStats;
@@ -12,6 +13,7 @@ interface MarketplaceAnalyzerProps {
 export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyzerProps) {
   const [analysis, setAnalysis] = useState<ItemAnalysis[]>([]);
   const [upgrades, setUpgrades] = useState<UpgradeOpportunity[]>([]);
+  const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (marketData && character) {
@@ -71,8 +73,42 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
         return itemName === currentItemName && item.enhancementLevel > equipment.enhancement;
       });
 
+      // Group by base item and find most efficient tier
+      const itemGroups: { [baseItem: string]: AuctionItem[] } = {};
       potentialUpgrades.forEach(upgrade => {
-        if (upgrade.enhancementLevel > equipment.enhancement) {
+        const baseKey = upgrade.itemHrid;
+        if (!itemGroups[baseKey]) {
+          itemGroups[baseKey] = [];
+        }
+        itemGroups[baseKey].push(upgrade);
+      });
+
+      // For each base item, find the most cost-efficient tier and collect all variants
+      Object.values(itemGroups).forEach(items => {
+        const mostEfficient = items.reduce((best, current) => {
+          const currentEfficiency = current.price / Math.max(current.enhancementLevel - equipment.enhancement, 1);
+          const bestEfficiency = best.price / Math.max(best.enhancementLevel - equipment.enhancement, 1);
+          return currentEfficiency < bestEfficiency ? current : best;
+        });
+
+        if (mostEfficient.enhancementLevel > equipment.enhancement) {
+          // Create all variants with cost per level
+          const allVariants = items
+            .filter(item => item.enhancementLevel > equipment.enhancement)
+            .map(item => ({
+              itemHrid: item.itemHrid,
+              itemName: item.itemName,
+              enhancementLevel: item.enhancementLevel,
+              price: item.price,
+              costPerLevel: item.price / Math.max(item.enhancementLevel - equipment.enhancement, 1),
+              improvement: {
+                stat: 'Enhancement Level',
+                increase: item.enhancementLevel - equipment.enhancement,
+                percentage: ((item.enhancementLevel - equipment.enhancement) / Math.max(equipment.enhancement, 1)) * 100,
+              },
+            }))
+            .sort((a, b) => a.costPerLevel - b.costPerLevel);
+
           opportunities.push({
             currentItem: {
               itemHrid: `/items/${currentItemName}`,
@@ -81,17 +117,18 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
               slot: slot,
             },
             suggestedUpgrade: {
-              itemHrid: upgrade.itemHrid,
-              itemName: upgrade.itemName,
-              enhancementLevel: upgrade.enhancementLevel,
-              price: upgrade.price,
+              itemHrid: mostEfficient.itemHrid,
+              itemName: mostEfficient.itemName,
+              enhancementLevel: mostEfficient.enhancementLevel,
+              price: mostEfficient.price,
               improvement: {
                 stat: 'Enhancement Level',
-                increase: upgrade.enhancementLevel - equipment.enhancement,
-                percentage: ((upgrade.enhancementLevel - equipment.enhancement) / Math.max(equipment.enhancement, 1)) * 100,
+                increase: mostEfficient.enhancementLevel - equipment.enhancement,
+                percentage: ((mostEfficient.enhancementLevel - equipment.enhancement) / Math.max(equipment.enhancement, 1)) * 100,
               },
             },
-            costEfficiency: upgrade.price / Math.max(upgrade.enhancementLevel - equipment.enhancement, 1),
+            costEfficiency: mostEfficient.price / Math.max(mostEfficient.enhancementLevel - equipment.enhancement, 1),
+            allVariants,
           });
         }
       });
@@ -99,6 +136,16 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
 
     opportunities.sort((a, b) => a.costEfficiency - b.costEfficiency);
     setUpgrades(opportunities.slice(0, 10));
+  };
+
+  const toggleVariants = (index: number) => {
+    const newExpanded = new Set(expandedVariants);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedVariants(newExpanded);
   };
 
   const exportData = () => {
@@ -167,20 +214,66 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
               {upgrades.slice(0, 10).map((upgrade, index) => (
                 <div key={index} className="bg-black/20 rounded-lg p-4">
                   <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="text-white font-medium">{upgrade.currentItem.slot}</p>
-                      <p className="text-gray-300 text-sm">
-                        {upgrade.currentItem.itemName} +{upgrade.currentItem.enhancementLevel} → {upgrade.suggestedUpgrade.itemName} +{upgrade.suggestedUpgrade.enhancementLevel}
-                      </p>
-                      <p className="text-gray-400 text-xs mt-1">
-                        Cost efficiency: {upgrade.costEfficiency.toFixed(0)} coins/level
-                      </p>
+                    <div className="flex items-center gap-3 flex-1">
+                      <ItemIcon
+                        itemHrid={upgrade.suggestedUpgrade.itemHrid}
+                        size={32}
+                        className="flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <p className="text-white font-medium">{upgrade.currentItem.slot}</p>
+                        <p className="text-gray-300 text-sm">
+                          {upgrade.currentItem.itemName} +{upgrade.currentItem.enhancementLevel} → {upgrade.suggestedUpgrade.itemName} +{upgrade.suggestedUpgrade.enhancementLevel}
+                        </p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Cost efficiency: {upgrade.costEfficiency.toFixed(0)} coins/level
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-yellow-300 font-medium">{upgrade.suggestedUpgrade.price.toLocaleString()} coins</p>
                       <p className="text-gray-400 text-sm">+{upgrade.suggestedUpgrade.improvement.increase} levels</p>
                     </div>
                   </div>
+
+                  {upgrade.allVariants.length > 1 && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => toggleVariants(index)}
+                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
+                      >
+                        {expandedVariants.has(index) ? '▼' : '▶'} See other variants ({upgrade.allVariants.length})
+                      </button>
+
+                      {expandedVariants.has(index) && (
+                        <div className="mt-3 space-y-2 border-t border-gray-600 pt-3">
+                          <p className="text-gray-300 text-sm font-medium">All available upgrades (ask prices - immediate purchase):</p>
+                          {upgrade.allVariants.map((variant, variantIndex) => (
+                            <div key={variantIndex} className="flex justify-between items-center bg-gray-800/50 rounded p-2">
+                              <div className="flex items-center gap-2">
+                                <ItemIcon
+                                  itemHrid={variant.itemHrid}
+                                  size={20}
+                                  className="flex-shrink-0"
+                                />
+                                <div>
+                                  <p className="text-gray-200 text-sm">
+                                    {variant.itemName} +{variant.enhancementLevel}
+                                  </p>
+                                  <p className="text-gray-400 text-xs">
+                                    +{variant.improvement.increase} levels • {variant.costPerLevel.toFixed(0)} coins/level
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-yellow-300 text-sm font-medium">
+                                {variant.price.toLocaleString()} coins
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

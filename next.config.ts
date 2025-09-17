@@ -6,9 +6,11 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // GitHub Pages serves from subdirectory - must match repository name
-  basePath: '/MWIMarketplaceUpgradeFinder',
-  assetPrefix: '/MWIMarketplaceUpgradeFinder',
+  // GitHub Pages configuration - only apply for production builds
+  ...(process.env.NODE_ENV === 'production' && {
+    basePath: '/MWIMarketplaceUpgradeFinder',
+    assetPrefix: '/MWIMarketplaceUpgradeFinder',
+  }),
 
   // Disable server-side features for static export
   experimental: {

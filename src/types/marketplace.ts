@@ -85,6 +85,18 @@ export interface UpgradeOpportunity {
     };
   };
   costEfficiency: number;
+  allVariants: Array<{
+    itemHrid: string;
+    itemName: string;
+    enhancementLevel: number;
+    price: number;
+    costPerLevel: number;
+    improvement: {
+      stat: string;
+      increase: number;
+      percentage: number;
+    };
+  }>;
 }
 
 export interface MarketStats {

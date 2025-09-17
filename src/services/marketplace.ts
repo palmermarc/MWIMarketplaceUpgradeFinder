@@ -20,9 +20,8 @@ export class MarketplaceService {
 
         const enhancementLevel = parseInt(level);
         const askPrice = prices.a;
-        const bidPrice = prices.b;
 
-        // Create entries for both ask and bid prices
+        // Only create entries for ask prices (immediate purchase prices)
         items.push({
           id: `${itemId++}`,
           itemHrid: itemPath,
@@ -35,21 +34,6 @@ export class MarketplaceService {
           timeRemaining: 0,
           timestamp: new Date(apiData.timestamp * 1000).toISOString(),
         });
-
-        if (bidPrice !== askPrice) {
-          items.push({
-            id: `${itemId++}`,
-            itemHrid: itemPath,
-            itemName: this.parseItemName(itemPath),
-            enhancementLevel,
-            quantity: 1,
-            price: bidPrice,
-            pricePerUnit: bidPrice,
-            seller: 'Market',
-            timeRemaining: 0,
-            timestamp: new Date(apiData.timestamp * 1000).toISOString(),
-          });
-        }
       });
     });
 
