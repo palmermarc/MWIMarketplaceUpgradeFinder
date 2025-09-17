@@ -58,8 +58,36 @@ src/
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
+- `npm run export` - Build for static export (GitHub Pages)
 - `npm run lint` - Run ESLint
 - `npm run start` - Start production server
+
+## Deployment
+
+This app is configured for deployment to GitHub Pages using GitHub Actions.
+
+### Automatic Deployment
+1. Push changes to the `main` branch
+2. GitHub Actions will automatically build and deploy the app
+3. App will be available at: `https://palmermarc.github.io/MWIMarketplaceUpgradeFinder/`
+
+### Manual Deployment
+```bash
+# Build the static export
+npm run export
+
+# Or use the deployment script
+./deploy.sh
+```
+
+### GitHub Pages Setup
+1. Go to repository Settings → Pages
+2. Set Source to "GitHub Actions"
+3. The workflow will handle the rest automatically
+
+## Live Demo
+
+🌐 **[Try the app live](https://palmermarc.github.io/MWIMarketplaceUpgradeFinder/)**
 
 ## Contributing
 

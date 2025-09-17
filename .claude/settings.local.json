@@ -6,7 +6,10 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run export:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
