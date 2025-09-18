@@ -11,7 +11,8 @@
       "Bash(npm run export:*)",
       "Bash(chmod:*)",
       "Bash(git push:*)",
-      "WebFetch(domain:palmermarc.github.io)"
+      "WebFetch(domain:palmermarc.github.io)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
