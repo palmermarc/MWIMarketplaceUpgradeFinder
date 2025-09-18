@@ -9,9 +9,11 @@ import { MarketData } from '@/types/marketplace';
 export default function Home() {
   const [character, setCharacter] = useState<CharacterStats | null>(null);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [rawCharacterData, setRawCharacterData] = useState<string | null>(null);
 
-  const handleCharacterImported = (characterData: CharacterStats) => {
+  const handleCharacterImported = (characterData: CharacterStats, rawData?: string) => {
     setCharacter(characterData);
+    setRawCharacterData(rawData || null);
   };
 
   const handleMarketDataLoaded = (data: MarketData) => {
@@ -40,6 +42,7 @@ export default function Home() {
             <MarketplaceAnalyzer
               character={character}
               marketData={marketData}
+              rawCharacterData={rawCharacterData}
             />
           )}
         </main>

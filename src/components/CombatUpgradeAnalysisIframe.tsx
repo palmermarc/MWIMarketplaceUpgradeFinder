@@ -7,7 +7,6 @@ import { CharacterStats } from '@/types/character';
 
 interface CombatUpgradeAnalysisProps {
   character: CharacterStats;
-  upgrades: UpgradeOpportunity[];
   rawCharacterData?: string | null;
 }
 
@@ -30,7 +29,7 @@ interface ZoneData {
   no_rng_profit: string;
 }
 
-export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterData }: CombatUpgradeAnalysisProps) {
+export function CombatUpgradeAnalysisIframe({ character, rawCharacterData }: CombatUpgradeAnalysisProps) {
   const [zoneData, setZoneData] = useState<ZoneData[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);

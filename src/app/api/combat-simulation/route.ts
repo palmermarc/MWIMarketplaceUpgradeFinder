@@ -14,13 +14,12 @@ export interface CombatSimulationResult {
 
 interface SimulationRequest {
   character: CharacterStats;
-  equipmentOverride?: { [slot: string]: { item: string; enhancement: number } };
   rawCharacterData?: string; // Add the original import string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { character, equipmentOverride, rawCharacterData }: SimulationRequest = await request.json();
+    const { character, rawCharacterData }: SimulationRequest = await request.json();
 
     console.log('Starting combat simulation for character:', character);
 
@@ -577,7 +576,7 @@ export async function POST(request: NextRequest) {
               const dataRows = Array.from(tbody.querySelectorAll('tr'));
               const data = [];
 
-              dataRows.forEach((row, rowIndex) => {
+              dataRows.forEach((row) => {
                 const cells = Array.from(row.querySelectorAll('td'));
                 if (cells.length > 0) {
                   const rowObject = {};
@@ -617,7 +616,7 @@ export async function POST(request: NextRequest) {
       // Return the zone data regardless of success/failure
       const zoneDataResult_typed = zoneDataResult as {
         success: boolean;
-        data: any;
+        data: Array<{ [key: string]: string }>;
         error?: string;
         source?: string;
       };

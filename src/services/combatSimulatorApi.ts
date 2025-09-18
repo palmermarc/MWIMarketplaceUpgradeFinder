@@ -9,7 +9,7 @@ export interface CombatSimulationResult {
   zone: string;
   success: boolean;
   error?: string;
-  allZonesData?: { [key: string]: { [key: string]: any } };
+  allZonesData?: { [key: string]: { [key: string]: string | number } };
 }
 
 export interface CombatUpgradeAnalysis extends UpgradeOpportunity {
