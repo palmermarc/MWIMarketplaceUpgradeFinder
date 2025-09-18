@@ -21,7 +21,9 @@
       "mcp__ide__getDiagnostics",
       "Bash(git branch:*)",
       "Bash(curl:*)",
-      "Bash(npx puppeteer browsers:*)"
+      "Bash(npx puppeteer browsers:*)",
+      "Bash(vercel:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

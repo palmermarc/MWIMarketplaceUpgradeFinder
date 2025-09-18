@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CombatSimulatorApiService } from '@/services/combatSimulatorApi';
+import { CombatSimulatorApiService, CombatUpgradeAnalysis, ConcurrentUpgradeAnalysisProgress } from '@/services/combatSimulatorApi';
 import { UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
 
@@ -42,14 +42,55 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
   const [sortColumn, setSortColumn] = useState<string>('no_rng_profit');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // New state for concurrent upgrade analysis
+  const [upgradeAnalysisResults, setUpgradeAnalysisResults] = useState<CombatUpgradeAnalysis[]>([]);
+  const [concurrentProgress, setConcurrentProgress] = useState<ConcurrentUpgradeAnalysisProgress | null>(null);
+  const [analysisMode, setAnalysisMode] = useState<'baseline' | 'upgrades'>('baseline');
+
   // Note: Not filtering to combat items in baseline mode - will be used in upgrade mode
 
   // No cleanup needed for API-based approach
+
+  const runConcurrentUpgradeAnalysis = async () => {
+    setIsAnalyzing(true);
+    setIsInitializing(true);
+    setError(null);
+    setAnalysisMode('upgrades');
+    setConcurrentProgress(null);
+    setUpgradeAnalysisResults([]);
+
+    try {
+      console.log(`🚀 CONCURRENT UPGRADE MODE: Analyzing ${upgrades.length} upgrades...`);
+
+      setIsInitializing(false);
+
+      // Run concurrent upgrade analysis with progress tracking
+      const results = await CombatSimulatorApiService.analyzeCombatUpgradesConcurrent(
+        character,
+        upgrades,
+        (progressUpdate) => {
+          setConcurrentProgress(progressUpdate);
+          setProgress({ current: progressUpdate.completed, total: progressUpdate.total });
+        }
+      );
+
+      console.log('✅ Concurrent upgrade analysis completed:', results);
+      setUpgradeAnalysisResults(results);
+
+    } catch (err) {
+      console.error('❌ Concurrent upgrade analysis failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze upgrades');
+    } finally {
+      setIsAnalyzing(false);
+      setIsInitializing(false);
+    }
+  };
 
   const runCombatAnalysis = async () => {
     setIsAnalyzing(true);
     setIsInitializing(true);
     setError(null);
+    setAnalysisMode('baseline');
     setProgress({ current: 0, total: 1 });
 
     try {
@@ -141,34 +182,45 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
-  const formatNumber = (num: number): string => {
-    return Math.round(num).toLocaleString();
-  };
-
-  const getImprovementColor = (value: number): string => {
-    if (value > 0) return 'text-green-400';
-    if (value < 0) return 'text-red-400';
-    return 'text-gray-400';
-  };
-
   const bestProfitZone = getBestZoneForProfit();
   const bestExpZone = getBestZoneForExp();
 
   return (
     <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-purple-200">Combat Zone Analysis</h3>
-        <button
-          onClick={runCombatAnalysis}
-          disabled={isAnalyzing}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            isAnalyzing
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : 'bg-purple-600 text-white hover:bg-purple-700'
-          }`}
-        >
-          {isAnalyzing ? 'Analyzing Zones...' : 'Run Zone Analysis'}
-        </button>
+        <h3 className="text-lg font-bold text-purple-200">
+          {analysisMode === 'baseline' ? 'Combat Zone Analysis' : 'Concurrent Upgrade Analysis'}
+        </h3>
+        <div className="flex gap-2">
+          <button
+            onClick={runCombatAnalysis}
+            disabled={isAnalyzing}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              isAnalyzing
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : analysisMode === 'baseline'
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {analysisMode === 'baseline' && isAnalyzing ? 'Analyzing Zones...' : 'Run Zone Analysis'}
+          </button>
+          {upgrades.length > 0 && (
+            <button
+              onClick={runConcurrentUpgradeAnalysis}
+              disabled={isAnalyzing}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                isAnalyzing
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : analysisMode === 'upgrades'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-green-700 text-green-100 hover:bg-green-600'
+              }`}
+            >
+              {analysisMode === 'upgrades' && isAnalyzing ? 'Analyzing Upgrades...' : `Analyze ${upgrades.length} Upgrades`}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -181,24 +233,58 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
         <div className="bg-black/20 rounded-lg p-6 mb-4">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-300">
-              {isInitializing ? 'Initializing combat simulator...' : 'Analyzing all combat zones...'}
+              {isInitializing
+                ? 'Initializing combat simulator...'
+                : analysisMode === 'baseline'
+                  ? 'Analyzing all combat zones...'
+                  : 'Running concurrent upgrade simulations...'
+              }
             </span>
-            <span className="text-purple-300">
-              🎯 ZONE ANALYSIS
+            <span className={analysisMode === 'baseline' ? 'text-purple-300' : 'text-green-300'}>
+              {analysisMode === 'baseline' ? '🎯 ZONE ANALYSIS' : '🚀 CONCURRENT UPGRADES'}
             </span>
           </div>
 
           <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
             <div
-              className="bg-purple-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                analysisMode === 'baseline' ? 'bg-purple-500' : 'bg-green-500'
+              }`}
+              style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
             ></div>
           </div>
+
+          {analysisMode === 'upgrades' && concurrentProgress && (
+            <div className="grid grid-cols-2 gap-4 mb-2 text-sm">
+              <div>
+                <span className="text-gray-400">Progress: </span>
+                <span className="text-green-300">{concurrentProgress.completed}/{concurrentProgress.total}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">In Progress: </span>
+                <span className="text-yellow-300">{concurrentProgress.inProgress}</span>
+              </div>
+              {concurrentProgress.summary && (
+                <>
+                  <div>
+                    <span className="text-gray-400">Successful: </span>
+                    <span className="text-green-300">{concurrentProgress.summary.successful}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Duration: </span>
+                    <span className="text-blue-300">{(concurrentProgress.summary.duration / 1000).toFixed(1)}s</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <p className="text-gray-400 text-sm">
             {isInitializing
               ? 'Loading external combat simulator...'
-              : 'Testing all zones with your current equipment...'
+              : analysisMode === 'baseline'
+                ? 'Testing all zones with your current equipment...'
+                : `Running ${upgrades.length} upgrade simulations in parallel for 5-10x faster results...`
             }
           </p>
         </div>
@@ -360,9 +446,105 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
         </div>
       )}
 
+      {/* Upgrade Analysis Results */}
+      {upgradeAnalysisResults.length > 0 && (
+        <div className="space-y-4">
+          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
+            <h4 className="text-lg font-bold text-green-200 mb-4">🚀 Concurrent Upgrade Analysis Results</h4>
+
+            {concurrentProgress?.summary && (
+              <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+                <div className="bg-black/20 rounded p-3">
+                  <div className="text-green-300 font-bold">{concurrentProgress.summary.successful}</div>
+                  <div className="text-gray-400">Successful</div>
+                </div>
+                <div className="bg-black/20 rounded p-3">
+                  <div className="text-red-300 font-bold">{concurrentProgress.summary.failed}</div>
+                  <div className="text-gray-400">Failed</div>
+                </div>
+                <div className="bg-black/20 rounded p-3">
+                  <div className="text-blue-300 font-bold">{(concurrentProgress.summary.duration / 1000).toFixed(1)}s</div>
+                  <div className="text-gray-400">Duration</div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {upgradeAnalysisResults
+                .sort((a, b) => (b.combatResults?.improvement.percentageIncrease || 0) - (a.combatResults?.improvement.percentageIncrease || 0))
+                .map((upgrade, index) => (
+                <div key={index} className="bg-black/20 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-bold text-white">{upgrade.currentItem.slot}</div>
+                      <div className="text-sm text-gray-400">
+                        {upgrade.currentItem.itemName} +{upgrade.currentItem.enhancementLevel} → {upgrade.suggestedUpgrade.itemName} +{upgrade.suggestedUpgrade.enhancementLevel}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-bold ${
+                        (upgrade.combatResults?.improvement.percentageIncrease || 0) > 0
+                          ? 'text-green-300'
+                          : 'text-red-300'
+                      }`}>
+                        {(upgrade.combatResults?.improvement.percentageIncrease || 0) > 0 ? '+' : ''}
+                        {(upgrade.combatResults?.improvement.percentageIncrease || 0).toFixed(1)}%
+                      </div>
+                      <div className="text-sm text-gray-400">Performance</div>
+                    </div>
+                  </div>
+
+                  {upgrade.combatResults && (
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <div className="text-gray-400">Kills/Hour</div>
+                        <div className="text-white">
+                          {upgrade.combatResults.current.killsPerHour} → {upgrade.combatResults.upgraded.killsPerHour}
+                          <span className={`ml-1 ${upgrade.combatResults.improvement.killsPerHourIncrease >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            ({upgrade.combatResults.improvement.killsPerHourIncrease >= 0 ? '+' : ''}{upgrade.combatResults.improvement.killsPerHourIncrease})
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400">EXP/Hour</div>
+                        <div className="text-white">
+                          {upgrade.combatResults.current.expPerHour} → {upgrade.combatResults.upgraded.expPerHour}
+                          <span className={`ml-1 ${upgrade.combatResults.improvement.expPerHourIncrease >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            ({upgrade.combatResults.improvement.expPerHourIncrease >= 0 ? '+' : ''}{upgrade.combatResults.improvement.expPerHourIncrease})
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400">Profit/Hour</div>
+                        <div className="text-white">
+                          {upgrade.combatResults.current.profitPerHour} → {upgrade.combatResults.upgraded.profitPerHour}
+                          <span className={`ml-1 ${upgrade.combatResults.improvement.profitPerHourIncrease >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                            ({upgrade.combatResults.improvement.profitPerHourIncrease >= 0 ? '+' : ''}{upgrade.combatResults.improvement.profitPerHourIncrease})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-2 text-sm">
+                    <span className="text-gray-400">Cost: </span>
+                    <span className="text-yellow-300">{upgrade.suggestedUpgrade.price.toLocaleString()} crowns</span>
+                    <span className="text-gray-400 ml-4">Efficiency: </span>
+                    <span className="text-blue-300">{upgrade.costEfficiency.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 text-xs text-gray-400">
         <p>💡 This uses server-side browser automation (Puppeteer) for accurate combat simulation</p>
         <p>Analysis includes all difficulty levels for each combat zone</p>
+        {analysisMode === 'upgrades' && (
+          <p>🚀 Concurrent analysis runs {upgrades.length} simulations in parallel for 5-10x faster results</p>
+        )}
       </div>
     </div>
   );
