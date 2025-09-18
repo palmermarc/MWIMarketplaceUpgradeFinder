@@ -574,12 +574,12 @@ export async function POST(request: NextRequest) {
 
               // Extract data from tbody
               const dataRows = Array.from(tbody.querySelectorAll('tr'));
-              const data = [];
+              const data: Record<string, string>[] = [];
 
               dataRows.forEach((row) => {
                 const cells = Array.from(row.querySelectorAll('td'));
                 if (cells.length > 0) {
-                  const rowObject = {};
+                  const rowObject: Record<string, string> = {};
                   cells.forEach((cell, cellIndex) => {
                     const header = headers[cellIndex] || `column_${cellIndex}`;
                     rowObject[header] = cell.textContent?.trim() || '';
