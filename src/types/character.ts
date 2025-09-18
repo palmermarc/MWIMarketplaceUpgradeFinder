@@ -77,4 +77,5 @@ export interface CharacterStats {
     food: ConsumableItem[];
     drinks: ConsumableItem[];
   };
+  houseRooms: HouseRooms;
 }

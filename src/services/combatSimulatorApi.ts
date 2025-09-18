@@ -5,9 +5,11 @@ export interface CombatSimulationResult {
   killsPerHour: number;
   expPerHour: number;
   profitPerHour: number;
+  revenuePerHour: number;
   zone: string;
   success: boolean;
   error?: string;
+  allZonesData?: { [key: string]: { [key: string]: any } };
 }
 
 export interface CombatUpgradeAnalysis extends UpgradeOpportunity {
@@ -31,7 +33,8 @@ export class CombatSimulatorApiService {
    */
   static async runCombatSimulation(
     character: CharacterStats,
-    equipmentOverride?: { [slot: string]: { item: string; enhancement: number } }
+    equipmentOverride?: { [slot: string]: { item: string; enhancement: number } },
+    rawCharacterData?: string | null
   ): Promise<CombatSimulationResult> {
     try {
       console.log('Calling combat simulation API...');
@@ -43,7 +46,8 @@ export class CombatSimulatorApiService {
         },
         body: JSON.stringify({
           character,
-          equipmentOverride
+          equipmentOverride,
+          rawCharacterData
         }),
       });
 
@@ -77,6 +81,7 @@ export class CombatSimulatorApiService {
         killsPerHour: Math.round(baseKills * variation),
         expPerHour: Math.round(baseKills * variation * 15),
         profitPerHour: Math.round(baseKills * variation * 25),
+        revenuePerHour: Math.round(baseKills * variation * 35),
         zone: 'Mock Zone (API Failed)',
         success: false,
         error: error instanceof Error ? error.message : 'API call failed'
@@ -140,8 +145,8 @@ export class CombatSimulatorApiService {
           results.push({
             ...upgrade,
             combatResults: {
-              current: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, zone: 'unknown', success: false },
-              upgraded: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, zone: 'unknown', success: false },
+              current: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, revenuePerHour: 0, zone: 'unknown', success: false },
+              upgraded: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, revenuePerHour: 0, zone: 'unknown', success: false },
               improvement: { killsPerHourIncrease: 0, expPerHourIncrease: 0, profitPerHourIncrease: 0, percentageIncrease: 0 }
             }
           });

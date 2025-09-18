@@ -1,108 +1,144 @@
 'use client';
 
 import { useState } from 'react';
-import { CombatUpgradeAnalysis, CombatSimulatorApiService } from '@/services/combatSimulatorApi';
-import { ItemClassificationService } from '@/services/itemClassification';
+import { CombatSimulatorApiService } from '@/services/combatSimulatorApi';
 import { UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
-import { ItemIcon } from './ItemIcon';
 
 interface CombatUpgradeAnalysisProps {
   character: CharacterStats;
   upgrades: UpgradeOpportunity[];
+  rawCharacterData?: string | null;
 }
 
-export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgradeAnalysisProps) {
-  const [combatResults, setCombatResults] = useState<CombatUpgradeAnalysis[]>([]);
+interface ZoneData {
+  zone_name: string;
+  difficulty: string;
+  player: string;
+  encounters: string;
+  deaths_per_hour: string;
+  total_experience: string;
+  stamina: string;
+  intelligence: string;
+  attack: string;
+  magic: string;
+  ranged: string;
+  melee: string;
+  defense: string;
+  no_rng_revenue: string;
+  expense: string;
+  no_rng_profit: string;
+}
+
+export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterData }: CombatUpgradeAnalysisProps) {
+  const [zoneData, setZoneData] = useState<ZoneData[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [optimizeFor, setOptimizeFor] = useState<'profit' | 'exp'>('profit');
+  const [maxEnhancementTiers, setMaxEnhancementTiers] = useState(5);
+  const [showZoneTable, setShowZoneTable] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string>('no_rng_profit');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Filter to combat items only
-  const combatUpgrades = ItemClassificationService.filterCombatUpgrades(upgrades);
+  // Note: Not filtering to combat items in baseline mode - will be used in upgrade mode
 
   // No cleanup needed for API-based approach
 
   const runCombatAnalysis = async () => {
-    if (combatUpgrades.length === 0) {
-      setError('No combat upgrades found to analyze');
-      return;
-    }
-
     setIsAnalyzing(true);
     setIsInitializing(true);
     setError(null);
-    setProgress({ current: 0, total: combatUpgrades.length });
+    setProgress({ current: 0, total: 1 });
 
     try {
-      setProgress({ current: 0, total: combatUpgrades.length });
-      setIsInitializing(false); // No initialization needed for API approach
+      console.log('🎯 BASELINE MODE: Testing current equipment setup...');
 
-      // Analyze upgrades one by one with progress tracking
-      const results: CombatUpgradeAnalysis[] = [];
+      setProgress({ current: 0, total: 1 });
+      setIsInitializing(false);
 
-      for (let i = 0; i < combatUpgrades.length; i++) {
-        const upgrade = combatUpgrades[i];
-        setProgress({ current: i, total: combatUpgrades.length });
+      // Run baseline simulation to get zone data
+      const results = await CombatSimulatorApiService.runCombatSimulation(character, undefined, rawCharacterData);
 
-        try {
-          // Run simulation for this specific upgrade via API
-          const currentResults = await CombatSimulatorApiService.runCombatSimulation(character);
+      console.log('📊 Zone Results:', results);
 
-          // Create equipment override with the upgrade
-          const upgradedEquipment = { ...character.equipment };
-          upgradedEquipment[upgrade.currentItem.slot] = {
-            item: upgrade.suggestedUpgrade.itemName,
-            enhancement: upgrade.suggestedUpgrade.enhancementLevel
-          };
-
-          const upgradedResults = await CombatSimulatorApiService.runCombatSimulation(character, upgradedEquipment);
-
-          // Calculate improvements
-          const improvement = {
-            killsPerHourIncrease: upgradedResults.killsPerHour - currentResults.killsPerHour,
-            expPerHourIncrease: upgradedResults.expPerHour - currentResults.expPerHour,
-            profitPerHourIncrease: upgradedResults.profitPerHour - currentResults.profitPerHour,
-            percentageIncrease: currentResults.killsPerHour > 0
-              ? ((upgradedResults.killsPerHour - currentResults.killsPerHour) / currentResults.killsPerHour) * 100
-              : 0
-          };
-
-          results.push({
-            ...upgrade,
-            combatResults: {
-              current: currentResults,
-              upgraded: upgradedResults,
-              improvement
-            }
-          });
-
-          // Update results progressively
-          setCombatResults([...results]);
-
-        } catch (upgradeError) {
-          console.error(`Failed to analyze upgrade for ${upgrade.currentItem.slot}:`, upgradeError);
-          results.push({
-            ...upgrade,
-            combatResults: {
-              current: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, zone: 'unknown', success: false },
-              upgraded: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, zone: 'unknown', success: false },
-              improvement: { killsPerHourIncrease: 0, expPerHourIncrease: 0, profitPerHourIncrease: 0, percentageIncrease: 0 }
-            }
-          });
-        }
+      // The results should now be an array of zone data
+      if (Array.isArray(results)) {
+        setZoneData(results);
+      } else {
+        setError('Unexpected data format received from simulation');
       }
 
-      setProgress({ current: combatUpgrades.length, total: combatUpgrades.length });
-      setCombatResults(results);
+      setProgress({ current: 1, total: 1 });
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze combat upgrades');
+      setError(err instanceof Error ? err.message : 'Failed to establish baseline');
     } finally {
       setIsAnalyzing(false);
       setIsInitializing(false);
     }
+  };
+
+  const getBestZoneForProfit = (): ZoneData | null => {
+    if (zoneData.length === 0) return null;
+
+    return zoneData.reduce((best, current) => {
+      const currentProfit = parseFloat(current.no_rng_profit.replace(/,/g, '')) || 0;
+      const bestProfit = parseFloat(best.no_rng_profit.replace(/,/g, '')) || 0;
+      return currentProfit > bestProfit ? current : best;
+    });
+  };
+
+  const getBestZoneForExp = (): ZoneData | null => {
+    if (zoneData.length === 0) return null;
+
+    return zoneData.reduce((best, current) => {
+      const currentExp = parseFloat(current.total_experience) || 0;
+      const bestExp = parseFloat(best.total_experience) || 0;
+      return currentExp > bestExp ? current : best;
+    });
+  };
+
+  const handleFindUpgrades = () => {
+    // TODO: Implement upgrade finding logic
+    console.log('Finding upgrades for:', optimizeFor, 'with max tiers:', maxEnhancementTiers);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortedZoneData = () => {
+    return [...zoneData].sort((a, b) => {
+      const aValue = a[sortColumn as keyof ZoneData];
+      const bValue = b[sortColumn as keyof ZoneData];
+
+      // Try to parse as numbers first
+      const aNum = parseFloat(aValue.replace(/,/g, '')) || 0;
+      const bNum = parseFloat(bValue.replace(/,/g, '')) || 0;
+
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+
+      // Fall back to string comparison
+      if (sortDirection === 'asc') {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
+    });
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) return '⇅';
+    return sortDirection === 'asc' ? '↑' : '↓';
   };
 
   const formatNumber = (num: number): string => {
@@ -115,30 +151,25 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
     return 'text-gray-400';
   };
 
+  const bestProfitZone = getBestZoneForProfit();
+  const bestExpZone = getBestZoneForExp();
+
   return (
     <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-purple-200">Combat Upgrade Analysis (Puppeteer)</h3>
+        <h3 className="text-lg font-bold text-purple-200">Combat Zone Analysis</h3>
         <button
           onClick={runCombatAnalysis}
-          disabled={isAnalyzing || combatUpgrades.length === 0}
+          disabled={isAnalyzing}
           className={`px-4 py-2 rounded-lg font-medium transition-all ${
             isAnalyzing
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : combatUpgrades.length === 0
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-purple-600 text-white hover:bg-purple-700'
           }`}
         >
-          {isAnalyzing ? 'Analyzing...' : `Analyze ${combatUpgrades.length} Combat Upgrades`}
+          {isAnalyzing ? 'Analyzing Zones...' : 'Run Zone Analysis'}
         </button>
       </div>
-
-      {combatUpgrades.length === 0 && (
-        <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
-          <p className="text-gray-300">No combat upgrades found. Only tools detected in current upgrades.</p>
-        </div>
-      )}
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
@@ -150,10 +181,10 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
         <div className="bg-black/20 rounded-lg p-6 mb-4">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-300">
-              {isInitializing ? 'Initializing combat simulator...' : 'Running combat simulations...'}
+              {isInitializing ? 'Initializing combat simulator...' : 'Analyzing all combat zones...'}
             </span>
             <span className="text-purple-300">
-              {progress.current}/{progress.total}
+              🎯 ZONE ANALYSIS
             </span>
           </div>
 
@@ -167,98 +198,171 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
           <p className="text-gray-400 text-sm">
             {isInitializing
               ? 'Loading external combat simulator...'
-              : `Analyzing upgrade ${Math.max(0, progress.current - 1)} of ${progress.total - 1}`
+              : 'Testing all zones with your current equipment...'
             }
           </p>
         </div>
       )}
 
-      {combatResults.length > 0 && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-300 border-b border-gray-600 pb-2">
-            <div>Upgrade</div>
-            <div>Kills/Hour</div>
-            <div>EXP/Hour</div>
-            <div>Profit/Hour</div>
+      {zoneData.length > 0 && (
+        <div className="space-y-6">
+          {/* Best Zone Results */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Best Profit Zone */}
+            {bestProfitZone && (
+              <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-green-200 mb-2">🪙 Best for Profit</h4>
+                <p className="text-white">
+                  Your best place for farming <strong>Profit</strong> is{' '}
+                  <span className="text-green-300 font-semibold">{bestProfitZone.zone_name}</span>{' '}
+                  (Difficulty {bestProfitZone.difficulty})
+                </p>
+                <p className="text-green-100 text-sm mt-1">
+                  Earning <strong>{parseFloat(bestProfitZone.no_rng_profit.replace(/,/g, '')).toLocaleString()} coins/hour</strong>
+                </p>
+              </div>
+            )}
+
+            {/* Best EXP Zone */}
+            {bestExpZone && (
+              <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
+                <h4 className="text-lg font-bold text-blue-200 mb-2">⭐ Best for Experience</h4>
+                <p className="text-white">
+                  Your best place for farming <strong>EXP</strong> is{' '}
+                  <span className="text-blue-300 font-semibold">{bestExpZone.zone_name}</span>{' '}
+                  (Difficulty {bestExpZone.difficulty})
+                </p>
+                <p className="text-blue-100 text-sm mt-1">
+                  Earning <strong>{parseFloat(bestExpZone.total_experience).toLocaleString()} EXP/hour</strong>
+                </p>
+              </div>
+            )}
           </div>
 
-          {combatResults
-            .sort((a, b) => (b.combatResults?.improvement.percentageIncrease || 0) - (a.combatResults?.improvement.percentageIncrease || 0))
-            .map((result, index) => {
-              const combat = result.combatResults;
-              if (!combat) return null;
+          {/* Upgrade Analysis Form */}
+          <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6">
+            <h4 className="text-lg font-bold text-yellow-200 mb-4">🔧 Find Equipment Upgrades</h4>
 
-              return (
-                <div key={index} className="bg-black/20 rounded-lg p-4">
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    {/* Upgrade Info */}
-                    <div className="flex items-center gap-3">
-                      <ItemIcon
-                        itemHrid={result.suggestedUpgrade.itemHrid}
-                        size={32}
-                        className="flex-shrink-0"
-                      />
-                      <div>
-                        <p className="text-white font-medium">{result.currentItem.slot}</p>
-                        <p className="text-gray-300 text-sm">
-                          +{result.suggestedUpgrade.enhancementLevel} → {result.suggestedUpgrade.itemName}
-                        </p>
-                        <p className="text-yellow-300 text-xs">
-                          {result.suggestedUpgrade.price.toLocaleString()} coins
-                        </p>
-                      </div>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+              {/* Optimization Target */}
+              <div>
+                <label className="block text-yellow-200 text-sm font-medium mb-2">
+                  Optimize For:
+                </label>
+                <select
+                  value={optimizeFor}
+                  onChange={(e) => setOptimizeFor(e.target.value as 'profit' | 'exp')}
+                  className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+                >
+                  <option value="profit">Profit (Coins/Hour)</option>
+                  <option value="exp">Experience (EXP/Hour)</option>
+                </select>
+              </div>
 
-                    {/* Kills/Hour */}
-                    <div>
-                      <p className="text-white">{formatNumber(combat.upgraded.killsPerHour)}</p>
-                      <p className={`text-sm ${getImprovementColor(combat.improvement.killsPerHourIncrease)}`}>
-                        {combat.improvement.killsPerHourIncrease > 0 ? '+' : ''}{formatNumber(combat.improvement.killsPerHourIncrease)}
-                        {combat.improvement.percentageIncrease !== 0 && (
-                          <span className="ml-1">
-                            ({combat.improvement.percentageIncrease > 0 ? '+' : ''}{combat.improvement.percentageIncrease.toFixed(1)}%)
-                          </span>
-                        )}
-                      </p>
-                    </div>
+              {/* Enhancement Tiers */}
+              <div>
+                <label className="block text-yellow-200 text-sm font-medium mb-2">
+                  Max Enhancement Tiers:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={maxEnhancementTiers}
+                  onChange={(e) => setMaxEnhancementTiers(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+                />
+                <p className="text-yellow-300 text-xs mt-1">How many enhancement levels to consider (1-20)</p>
+              </div>
 
-                    {/* EXP/Hour */}
-                    <div>
-                      <p className="text-white">{formatNumber(combat.upgraded.expPerHour)}</p>
-                      <p className={`text-sm ${getImprovementColor(combat.improvement.expPerHourIncrease)}`}>
-                        {combat.improvement.expPerHourIncrease > 0 ? '+' : ''}{formatNumber(combat.improvement.expPerHourIncrease)}
-                      </p>
-                    </div>
+              {/* Find Upgrades Button */}
+              <div>
+                <label className="block text-yellow-200 text-sm font-medium mb-2">&nbsp;</label>
+                <button
+                  onClick={handleFindUpgrades}
+                  className="w-full px-4 py-2 bg-yellow-600 text-white font-medium rounded-lg hover:bg-yellow-700 transition-all"
+                >
+                  Find My Best Upgrades
+                </button>
+              </div>
+            </div>
+          </div>
 
-                    {/* Profit/Hour */}
-                    <div>
-                      <p className="text-white">{formatNumber(combat.upgraded.profitPerHour)}</p>
-                      <p className={`text-sm ${getImprovementColor(combat.improvement.profitPerHourIncrease)}`}>
-                        {combat.improvement.profitPerHourIncrease > 0 ? '+' : ''}{formatNumber(combat.improvement.profitPerHourIncrease)}
-                      </p>
-                    </div>
-                  </div>
+          {/* Zone Data Summary */}
+          <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="text-lg font-bold text-gray-200 mb-2">📊 Analysis Summary</h4>
+                <p className="text-gray-300 text-sm">
+                  Analyzed <strong>{zoneData.length} zones</strong> with your current equipment configuration.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowZoneTable(true)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all"
+              >
+                View Full Data
+              </button>
+            </div>
+          </div>
 
-                  {(!combat.current.success || !combat.upgraded.success) && (
-                    <div className="mt-2 text-orange-300 text-sm">
-                      ⚠ Simulation may be inaccurate due to iframe communication limitations
-                    </div>
-                  )}
-
-                  {(combat.current.error?.includes('API Failed') || combat.upgraded.error?.includes('API Failed')) && (
-                    <div className="mt-2 text-blue-300 text-sm">
-                      ℹ Using mock data - combat simulation API failed
-                    </div>
-                  )}
+          {/* Zone Data Table Modal */}
+          {showZoneTable && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-gray-900 rounded-lg border border-gray-600 max-w-7xl w-full max-h-[90vh] overflow-hidden">
+                <div className="flex justify-between items-center p-4 border-b border-gray-600">
+                  <h3 className="text-xl font-bold text-white">Zone Analysis Data</h3>
+                  <button
+                    onClick={() => setShowZoneTable(false)}
+                    className="text-gray-400 hover:text-white text-2xl"
+                  >
+                    ×
+                  </button>
                 </div>
-              );
-            })}
+
+                <div className="overflow-auto max-h-[calc(90vh-100px)]">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-800 sticky top-0">
+                      <tr>
+                        {Object.keys(zoneData[0] || {}).map((header) => (
+                          <th
+                            key={header}
+                            className="p-2 text-left text-gray-200 cursor-pointer hover:bg-gray-700 border-b border-gray-600"
+                            onClick={() => handleSort(header)}
+                          >
+                            <div className="flex items-center gap-1">
+                              {header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              <span className="text-xs">{getSortIcon(header)}</span>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getSortedZoneData().map((zone, index) => (
+                        <tr
+                          key={index}
+                          className={`${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-700/50'} hover:bg-gray-600/50`}
+                        >
+                          {Object.entries(zone).map(([key, value]) => (
+                            <td key={key} className="p-2 text-gray-300 border-b border-gray-700">
+                              {value}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <div className="mt-4 text-xs text-gray-400">
         <p>💡 This uses server-side browser automation (Puppeteer) for accurate combat simulation</p>
-        <p>If the external simulator cannot be automated, mock data will be generated for demonstration</p>
+        <p>Analysis includes all difficulty levels for each combat zone</p>
       </div>
     </div>
   );

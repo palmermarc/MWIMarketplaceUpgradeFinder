@@ -6,7 +6,7 @@ import { MarketData } from '@/types/marketplace';
 import { MarketplaceService } from '@/services/marketplace';
 
 interface CharacterImportProps {
-  onCharacterImported: (character: CharacterStats) => void;
+  onCharacterImported: (character: CharacterStats, rawData?: string) => void;
   onMarketDataLoaded: (data: MarketData) => void;
 }
 
@@ -54,6 +54,7 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
         food: combatFood,
         drinks: combatDrinks,
       },
+      houseRooms: data.houseRooms || {},
     };
   };
 
@@ -70,7 +71,7 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
 
       const transformedData = transformCharacterData(characterData);
       setImportedCharacter(transformedData);
-      onCharacterImported(transformedData);
+      onCharacterImported(transformedData, jsonInput);
 
       // Auto-load marketplace data
       try {

@@ -9,9 +9,10 @@ import { CombatUpgradeAnalysisIframe } from './CombatUpgradeAnalysisIframe';
 interface MarketplaceAnalyzerProps {
   character: CharacterStats;
   marketData: MarketData;
+  rawCharacterData?: string | null;
 }
 
-export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyzerProps) {
+export function MarketplaceAnalyzer({ character, marketData, rawCharacterData }: MarketplaceAnalyzerProps) {
   const [analysis, setAnalysis] = useState<ItemAnalysis[]>([]);
   const [upgrades, setUpgrades] = useState<UpgradeOpportunity[]>([]);
   const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
@@ -209,7 +210,7 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
         {upgrades.length > 0 && (
           <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
             <h3 className="text-lg font-bold text-purple-200 mb-4">
-              Best Upgrade Opportunities ({upgrades.length} found)
+              Quick Upgrade Opportunities ({upgrades.length} found)
             </h3>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {upgrades.slice(0, 10).map((upgrade, index) => (
@@ -291,7 +292,7 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
         )}
 
         {upgrades.length > 0 && (
-          <CombatUpgradeAnalysisIframe character={character} upgrades={upgrades} />
+          <CombatUpgradeAnalysisIframe character={character} upgrades={upgrades} rawCharacterData={rawCharacterData} />
         )}
       </div>
     </div>

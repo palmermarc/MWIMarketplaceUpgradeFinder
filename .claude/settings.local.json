@@ -19,7 +19,9 @@
       "Bash(npm uninstall:*)",
       "Bash(git merge:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(curl:*)",
+      "Bash(npx puppeteer browsers:*)"
     ],
     "deny": [],
     "ask": []
