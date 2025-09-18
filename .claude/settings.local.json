@@ -12,7 +12,8 @@
       "Bash(chmod:*)",
       "Bash(git push:*)",
       "WebFetch(domain:palmermarc.github.io)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []
