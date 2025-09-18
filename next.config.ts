@@ -12,6 +12,27 @@ const nextConfig: NextConfig = {
     assetPrefix: '/MWIMarketplaceUpgradeFinder',
   }),
 
+  webpack: (config, { isServer }) => {
+    // Exclude puppeteer from client-side bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+      };
+
+      config.externals = [
+        ...(config.externals || []),
+        'puppeteer',
+        'puppeteer-core',
+      ];
+    }
+
+    return config;
+  },
+
   // Disable server-side features for static export
   experimental: {
     // No experimental features needed for static export
