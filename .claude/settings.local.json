@@ -12,7 +12,12 @@
       "Bash(chmod:*)",
       "Bash(git push:*)",
       "WebFetch(domain:palmermarc.github.io)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:shykai.github.io)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

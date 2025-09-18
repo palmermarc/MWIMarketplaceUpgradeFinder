@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MarketData, AuctionItem, ItemAnalysis, UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
 import { ItemIcon } from './ItemIcon';
+import { CombatUpgradeAnalysisIframe } from './CombatUpgradeAnalysisIframe';
 
 interface MarketplaceAnalyzerProps {
   character: CharacterStats;
@@ -287,6 +288,10 @@ export function MarketplaceAnalyzer({ character, marketData }: MarketplaceAnalyz
               No upgrade opportunities were found in the current marketplace data for your character&apos;s equipment.
             </p>
           </div>
+        )}
+
+        {upgrades.length > 0 && (
+          <CombatUpgradeAnalysisIframe character={character} upgrades={upgrades} />
         )}
       </div>
     </div>
