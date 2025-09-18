@@ -1,19 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
-  trailingSlash: true,
-  images: {
-    unoptimized: true,
-  },
-  // GitHub Pages configuration - only apply for production builds
-  ...(process.env.NODE_ENV === 'production' && {
-    basePath: '/MWIMarketplaceUpgradeFinder',
-    assetPrefix: '/MWIMarketplaceUpgradeFinder',
-  }),
+  // Remove static export for Vercel hosting with API routes
+  // output: 'export' is not needed for Vercel
 
   webpack: (config, { isServer }) => {
-    // Exclude puppeteer from client-side bundle
+    // Server-side: Allow Puppeteer
+    // Client-side: Exclude Puppeteer to prevent bundling issues
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -31,11 +24,6 @@ const nextConfig: NextConfig = {
     }
 
     return config;
-  },
-
-  // Disable server-side features for static export
-  experimental: {
-    // No experimental features needed for static export
   },
 };
 

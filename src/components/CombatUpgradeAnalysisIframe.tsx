@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { CombatUpgradeAnalysis } from '@/services/combatSimulatorIframe';
+import { useState } from 'react';
+import { CombatUpgradeAnalysis, CombatSimulatorApiService } from '@/services/combatSimulatorApi';
 import { ItemClassificationService } from '@/services/itemClassification';
 import { UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
@@ -22,15 +22,7 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
   // Filter to combat items only
   const combatUpgrades = ItemClassificationService.filterCombatUpgrades(upgrades);
 
-  useEffect(() => {
-    // Cleanup iframe when component unmounts
-    return () => {
-      // Dynamically import and cleanup
-      import('@/services/combatSimulatorIframe').then(({ CombatSimulatorIframeService }) => {
-        CombatSimulatorIframeService.cleanup();
-      });
-    };
-  }, []);
+  // No cleanup needed for API-based approach
 
   const runCombatAnalysis = async () => {
     if (combatUpgrades.length === 0) {
@@ -44,25 +36,19 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
     setProgress({ current: 0, total: combatUpgrades.length });
 
     try {
-      // Dynamically import the service
-      const { CombatSimulatorIframeService } = await import('@/services/combatSimulatorIframe');
-
-      // Initialize the iframe first
-      setProgress({ current: 0, total: combatUpgrades.length + 1 });
-      await CombatSimulatorIframeService.initialize();
-      setIsInitializing(false);
-      setProgress({ current: 1, total: combatUpgrades.length + 1 });
+      setProgress({ current: 0, total: combatUpgrades.length });
+      setIsInitializing(false); // No initialization needed for API approach
 
       // Analyze upgrades one by one with progress tracking
       const results: CombatUpgradeAnalysis[] = [];
 
       for (let i = 0; i < combatUpgrades.length; i++) {
         const upgrade = combatUpgrades[i];
-        setProgress({ current: i + 1, total: combatUpgrades.length + 1 });
+        setProgress({ current: i, total: combatUpgrades.length });
 
         try {
-          // Run simulation for this specific upgrade
-          const currentResults = await CombatSimulatorIframeService.runCombatSimulation(character);
+          // Run simulation for this specific upgrade via API
+          const currentResults = await CombatSimulatorApiService.runCombatSimulation(character);
 
           // Create equipment override with the upgrade
           const upgradedEquipment = { ...character.equipment };
@@ -71,7 +57,7 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
             enhancement: upgrade.suggestedUpgrade.enhancementLevel
           };
 
-          const upgradedResults = await CombatSimulatorIframeService.runCombatSimulation(character, upgradedEquipment);
+          const upgradedResults = await CombatSimulatorApiService.runCombatSimulation(character, upgradedEquipment);
 
           // Calculate improvements
           const improvement = {
@@ -108,7 +94,7 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
         }
       }
 
-      setProgress({ current: combatUpgrades.length + 1, total: combatUpgrades.length + 1 });
+      setProgress({ current: combatUpgrades.length, total: combatUpgrades.length });
       setCombatResults(results);
 
     } catch (err) {
@@ -132,7 +118,7 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
   return (
     <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-purple-200">Combat Upgrade Analysis (Iframe)</h3>
+        <h3 className="text-lg font-bold text-purple-200">Combat Upgrade Analysis (Puppeteer)</h3>
         <button
           onClick={runCombatAnalysis}
           disabled={isAnalyzing || combatUpgrades.length === 0}
@@ -259,9 +245,9 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
                     </div>
                   )}
 
-                  {(combat.current.error?.includes('mock data') || combat.upgraded.error?.includes('mock data')) && (
+                  {(combat.current.error?.includes('API Failed') || combat.upgraded.error?.includes('API Failed')) && (
                     <div className="mt-2 text-blue-300 text-sm">
-                      ℹ Using mock data - external simulator communication timed out
+                      ℹ Using mock data - combat simulation API failed
                     </div>
                   )}
                 </div>
@@ -271,8 +257,8 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades }: CombatUpgra
       )}
 
       <div className="mt-4 text-xs text-gray-400">
-        <p>💡 This attempts to use an embedded combat simulator iframe for accurate results</p>
-        <p>If the external simulator doesn&apos;t respond, mock data will be generated for demonstration</p>
+        <p>💡 This uses server-side browser automation (Puppeteer) for accurate combat simulation</p>
+        <p>If the external simulator cannot be automated, mock data will be generated for demonstration</p>
       </div>
     </div>
   );
