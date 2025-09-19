@@ -36,10 +36,9 @@ export async function POST(request: NextRequest) {
     });
     console.log('Starting combat simulation for character:', character);
 
-    // Launch Puppeteer browser (HEADLESS for production)
+    // Launch Puppeteer browser (HEADLESS for production with Vercel-optimized settings)
     const browser = await puppeteer.launch({
-      headless: true,  // Hide browser for production use
-      slowMo: 100,     // Minimal slowdown for reliability
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -47,9 +46,21 @@ export async function POST(request: NextRequest) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
+        '--single-process',
         '--disable-gpu',
-        '--window-size=1280,720' // Set a reasonable window size
-      ]
+        '--disable-gpu-sandbox',
+        '--disable-software-rasterizer',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-component-extensions-with-background-pages',
+        '--window-size=1920,1080'
+      ],
+      timeout: 60000
     });
 
     const page = await browser.newPage();
@@ -795,11 +806,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('API Error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+    console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
 
     return NextResponse.json(
       {
         error: 'Failed to run simulation',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        errorName: error instanceof Error ? error.name : 'Unknown',
+        errorStack: error instanceof Error ? error.stack : 'No stack available'
       },
       { status: 500 }
     );

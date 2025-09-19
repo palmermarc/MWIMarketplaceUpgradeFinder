@@ -6,7 +6,7 @@ export async function GET() {
     console.log('Starting simulator page inspection...');
 
     const browser = await puppeteer.launch({
-      headless: true, // Run in headless mode for production
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -14,8 +14,21 @@ export async function GET() {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--disable-gpu'
-      ]
+        '--single-process',
+        '--disable-gpu',
+        '--disable-gpu-sandbox',
+        '--disable-software-rasterizer',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-component-extensions-with-background-pages',
+        '--window-size=1920,1080'
+      ],
+      timeout: 60000
     });
 
     const page = await browser.newPage();

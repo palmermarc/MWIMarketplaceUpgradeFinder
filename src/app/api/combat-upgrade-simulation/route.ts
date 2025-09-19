@@ -115,10 +115,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`🎯 Total simulations planned: ${totalSimulations}`);
 
-    // Launch Puppeteer browser
+    // Launch Puppeteer browser with Vercel-optimized settings
     const browser = await puppeteer.launch({
       headless: true,
-      slowMo: 100,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -126,9 +125,21 @@ export async function POST(request: NextRequest) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
+        '--single-process',
         '--disable-gpu',
-        '--window-size=1280,720'
-      ]
+        '--disable-gpu-sandbox',
+        '--disable-software-rasterizer',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-component-extensions-with-background-pages',
+        '--window-size=1920,1080'
+      ],
+      timeout: 60000
     });
 
     const page = await browser.newPage();
