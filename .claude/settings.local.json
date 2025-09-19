@@ -24,7 +24,8 @@
       "Bash(npx puppeteer browsers:*)",
       "Bash(vercel:*)",
       "WebSearch",
-      "WebFetch(domain:vercel.com)"
+      "WebFetch(domain:vercel.com)",
+      "Bash(npx @sparticuz/chromium:*)"
     ],
     "deny": [],
     "ask": []
