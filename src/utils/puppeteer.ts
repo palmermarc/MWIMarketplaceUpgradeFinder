@@ -5,7 +5,14 @@ export interface PuppeteerLaunchOptions extends LaunchOptions {
 }
 
 export async function launchBrowser(options: PuppeteerLaunchOptions = {}): Promise<Browser> {
-  const isVercel = !!process.env.VERCEL_ENV;
+  const isVercel = !!process.env.VERCEL;
+
+  console.log('🔍 Environment check:', {
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NODE_ENV: process.env.NODE_ENV,
+    isVercel
+  });
 
   if (isVercel) {
     // Vercel production environment - use puppeteer-core with @sparticuz/chromium
