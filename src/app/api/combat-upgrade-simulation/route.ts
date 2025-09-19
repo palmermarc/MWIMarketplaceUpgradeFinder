@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     // Launch Puppeteer browser
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       slowMo: 100,
       args: [
         '--no-sandbox',

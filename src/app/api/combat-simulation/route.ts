@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Launch Puppeteer browser (HEADLESS for production)
     const browser = await puppeteer.launch({
-      headless: false,  // Hide browser for production use
+      headless: true,  // Hide browser for production use
       slowMo: 100,     // Minimal slowdown for reliability
       args: [
         '--no-sandbox',

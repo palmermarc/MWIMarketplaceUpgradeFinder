@@ -6,7 +6,7 @@ export async function GET() {
     console.log('Starting simulator page inspection...');
 
     const browser = await puppeteer.launch({
-      headless: false, // Run in visible mode for debugging
+      headless: true, // Run in headless mode for production
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
