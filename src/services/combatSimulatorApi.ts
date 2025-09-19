@@ -1,11 +1,10 @@
 import { CharacterStats } from '@/types/character';
 import { UpgradeOpportunity } from '@/types/marketplace';
-import { ConcurrentSimulationRequest, ConcurrentSimulationResponse } from '@/app/api/combat-simulation/route';
 
 export interface CombatSimulationResult {
   killsPerHour: number;
   expPerHour: number;
-  profitPerHour: number;
+  profitPerDay: number;
   revenuePerHour: number;
   zone: string;
   success: boolean;
@@ -20,26 +19,73 @@ export interface CombatUpgradeAnalysis extends UpgradeOpportunity {
     improvement: {
       killsPerHourIncrease: number;
       expPerHourIncrease: number;
-      profitPerHourIncrease: number;
+      profitPerDayIncrease: number;
       percentageIncrease: number;
     };
   };
 }
 
-export interface ConcurrentUpgradeAnalysisProgress {
-  total: number;
-  completed: number;
-  inProgress: number;
-  results: CombatUpgradeAnalysis[];
-  summary?: {
-    successful: number;
-    failed: number;
-    duration: number;
+export interface EnhancementUpgradeTest {
+  slot: string;
+  currentEnhancement: number;
+  testEnhancement: number;
+  item: string;
+}
+
+export interface UpgradeAnalysisRequest {
+  optimizeFor: 'profit' | 'exp';
+  targetZone: string;
+  selectedLevels: { [slot: string]: number };
+}
+
+export interface UpgradeAnalysisResult {
+  slot: string;
+  currentEnhancement: number;
+  recommendedEnhancement: number;
+  improvement: {
+    profitIncrease: number;
+    expIncrease: number;
+    percentageIncrease: number;
   };
+  allTestResults: {
+    enhancement: number;
+    profit: number;
+    exp: number;
+  }[];
+  enhancementCost?: number;
+  paybackDays?: number;
+}
+
+export interface StreamEvent {
+  type: 'status' | 'equipment_info' | 'baseline_complete' | 'test_starting' | 'test_complete' | 'test_failed' | 'simulation_complete' | 'error';
+  message?: string;
+  progress?: number;
+  slot?: string;
+  testLevel?: number;
+  currentLevel?: number;
+  simulationCount?: number;
+  totalSimulations?: number;
+  result?: any;
+  expIncrease?: number;
+  profitIncrease?: number;
+  enhancementCost?: number;
+  paybackDays?: number;
+  error?: string;
+  testPlan?: any[];
+  baselineResults?: any;
+  upgradeTests?: any[];
+  recommendations?: any[];
 }
 
 export class CombatSimulatorApiService {
   private static readonly API_ENDPOINT = '/api/combat-simulation';
+  private static readonly UPGRADE_API_ENDPOINT = '/api/combat-upgrade-simulation';
+
+  // Combat equipment slots to test for upgrades
+  private static readonly COMBAT_SLOTS = [
+    'head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands',
+    'ring', 'weapon', 'off_hand', 'pouch'
+  ];
 
   /**
    * Run combat simulation for a character configuration
@@ -47,7 +93,10 @@ export class CombatSimulatorApiService {
   static async runCombatSimulation(
     character: CharacterStats,
     equipmentOverride?: { [slot: string]: { item: string; enhancement: number } },
-    rawCharacterData?: string | null
+    rawCharacterData?: string | null,
+    targetZone?: string,
+    enhancementSlot?: string,
+    enhancementLevel?: number
   ): Promise<CombatSimulationResult> {
     try {
       console.log('Calling combat simulation API...');
@@ -60,7 +109,10 @@ export class CombatSimulatorApiService {
         body: JSON.stringify({
           character,
           equipmentOverride,
-          rawCharacterData
+          rawCharacterData,
+          targetZone,
+          enhancementSlot,
+          enhancementLevel
         }),
       });
 
@@ -93,7 +145,7 @@ export class CombatSimulatorApiService {
       return {
         killsPerHour: Math.round(baseKills * variation),
         expPerHour: Math.round(baseKills * variation * 15),
-        profitPerHour: Math.round(baseKills * variation * 25),
+        profitPerDay: Math.round(baseKills * variation * 25),
         revenuePerHour: Math.round(baseKills * variation * 35),
         zone: 'Mock Zone (API Failed)',
         success: false,
@@ -103,189 +155,7 @@ export class CombatSimulatorApiService {
   }
 
   /**
-   * Run multiple combat simulations concurrently
-   */
-  static async runConcurrentSimulations(
-    simulations: {
-      id: string;
-      character: CharacterStats;
-      equipmentOverride?: { [slot: string]: { item: string; enhancement: number } };
-      rawCharacterData?: string;
-    }[]
-  ): Promise<ConcurrentSimulationResponse> {
-    try {
-      console.log(`🚀 Starting ${simulations.length} concurrent simulations...`);
-
-      const request: ConcurrentSimulationRequest = { simulations };
-
-      const response = await fetch(this.API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Concurrent simulation failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log(`✅ Concurrent simulations completed:`, result.summary);
-
-      return result;
-
-    } catch (error) {
-      console.error('❌ Concurrent simulation API call failed:', error);
-
-      // Return fallback response
-      const mockResults: { [id: string]: CombatSimulationResult } = {};
-      simulations.forEach(sim => {
-        mockResults[sim.id] = {
-          killsPerHour: 0,
-          expPerHour: 0,
-          profitPerHour: 0,
-          revenuePerHour: 0,
-          zone: 'Error',
-          success: false,
-          error: error instanceof Error ? error.message : 'API call failed'
-        };
-      });
-
-      return {
-        results: mockResults,
-        summary: {
-          total: simulations.length,
-          successful: 0,
-          failed: simulations.length,
-          duration: 0
-        }
-      };
-    }
-  }
-
-  /**
-   * Analyze combat upgrades using concurrent simulations for much faster results
-   */
-  static async analyzeCombatUpgradesConcurrent(
-    character: CharacterStats,
-    upgrades: UpgradeOpportunity[],
-    progressCallback?: (progress: ConcurrentUpgradeAnalysisProgress) => void
-  ): Promise<CombatUpgradeAnalysis[]> {
-    const startTime = Date.now();
-    const results: CombatUpgradeAnalysis[] = [];
-
-    try {
-      console.log(`🚀 Starting concurrent combat upgrade analysis for ${upgrades.length} upgrades...`);
-
-      // Prepare simulations for current + all upgrades
-      const simulations = [
-        // Current equipment baseline
-        {
-          id: 'current',
-          character
-        },
-        // Each upgrade configuration
-        ...upgrades.map((upgrade, index) => {
-          const upgradedEquipment = { ...character.equipment };
-          upgradedEquipment[upgrade.currentItem.slot] = {
-            item: upgrade.suggestedUpgrade.itemName,
-            enhancement: upgrade.suggestedUpgrade.enhancementLevel
-          };
-
-          return {
-            id: `upgrade_${index}`,
-            character,
-            equipmentOverride: upgradedEquipment
-          };
-        })
-      ];
-
-      // Update progress
-      progressCallback?.({
-        total: upgrades.length,
-        completed: 0,
-        inProgress: simulations.length,
-        results: []
-      });
-
-      // Run all simulations concurrently
-      const concurrentResults = await this.runConcurrentSimulations(simulations);
-
-      // Get the current equipment baseline result
-      const currentResults = concurrentResults.results['current'];
-
-      if (!currentResults?.success) {
-        throw new Error('Failed to get baseline simulation results');
-      }
-
-      // Process upgrade results
-      upgrades.forEach((upgrade, index) => {
-        const upgradeId = `upgrade_${index}`;
-        const upgradedResults = concurrentResults.results[upgradeId];
-
-        if (upgradedResults?.success) {
-          // Calculate improvements
-          const improvement = {
-            killsPerHourIncrease: upgradedResults.killsPerHour - currentResults.killsPerHour,
-            expPerHourIncrease: upgradedResults.expPerHour - currentResults.expPerHour,
-            profitPerHourIncrease: upgradedResults.profitPerHour - currentResults.profitPerHour,
-            percentageIncrease: currentResults.killsPerHour > 0
-              ? ((upgradedResults.killsPerHour - currentResults.killsPerHour) / currentResults.killsPerHour) * 100
-              : 0
-          };
-
-          results.push({
-            ...upgrade,
-            combatResults: {
-              current: currentResults,
-              upgraded: upgradedResults,
-              improvement
-            }
-          });
-        } else {
-          // Add failed result
-          results.push({
-            ...upgrade,
-            combatResults: {
-              current: currentResults,
-              upgraded: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, revenuePerHour: 0, zone: 'Error', success: false },
-              improvement: { killsPerHourIncrease: 0, expPerHourIncrease: 0, profitPerHourIncrease: 0, percentageIncrease: 0 }
-            }
-          });
-        }
-      });
-
-      const duration = Date.now() - startTime;
-
-      // Final progress update
-      progressCallback?.({
-        total: upgrades.length,
-        completed: upgrades.length,
-        inProgress: 0,
-        results,
-        summary: {
-          successful: concurrentResults.summary.successful,
-          failed: concurrentResults.summary.failed,
-          duration
-        }
-      });
-
-      console.log(`✅ Concurrent upgrade analysis completed in ${duration}ms. Results: ${results.length}`);
-
-    } catch (error) {
-      console.error('❌ Failed to analyze combat upgrades concurrently:', error);
-
-      // Fallback to sequential method if concurrent fails
-      console.log('🔄 Falling back to sequential analysis...');
-      return this.analyzeCombatUpgrades(character, upgrades);
-    }
-
-    return results;
-  }
-
-  /**
-   * Analyze combat upgrades by comparing current vs upgraded equipment (LEGACY - Sequential)
+   * Analyze combat upgrades by comparing current vs upgraded equipment
    */
   static async analyzeCombatUpgrades(
     character: CharacterStats,
@@ -318,7 +188,7 @@ export class CombatSimulatorApiService {
           const improvement = {
             killsPerHourIncrease: upgradedResults.killsPerHour - currentResults.killsPerHour,
             expPerHourIncrease: upgradedResults.expPerHour - currentResults.expPerHour,
-            profitPerHourIncrease: upgradedResults.profitPerHour - currentResults.profitPerHour,
+            profitPerDayIncrease: upgradedResults.profitPerDay - currentResults.profitPerDay,
             percentageIncrease: currentResults.killsPerHour > 0
               ? ((upgradedResults.killsPerHour - currentResults.killsPerHour) / currentResults.killsPerHour) * 100
               : 0
@@ -340,9 +210,9 @@ export class CombatSimulatorApiService {
           results.push({
             ...upgrade,
             combatResults: {
-              current: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, revenuePerHour: 0, zone: 'unknown', success: false },
-              upgraded: { killsPerHour: 0, expPerHour: 0, profitPerHour: 0, revenuePerHour: 0, zone: 'unknown', success: false },
-              improvement: { killsPerHourIncrease: 0, expPerHourIncrease: 0, profitPerHourIncrease: 0, percentageIncrease: 0 }
+              current: { killsPerHour: 0, expPerHour: 0, profitPerDay: 0, revenuePerHour: 0, zone: 'unknown', success: false },
+              upgraded: { killsPerHour: 0, expPerHour: 0, profitPerDay: 0, revenuePerHour: 0, zone: 'unknown', success: false },
+              improvement: { killsPerHourIncrease: 0, expPerHourIncrease: 0, profitPerDayIncrease: 0, percentageIncrease: 0 }
             }
           });
         }
@@ -353,5 +223,168 @@ export class CombatSimulatorApiService {
     }
 
     return results;
+  }
+
+  /**
+   * Analyze equipment upgrades using the bulk upgrade simulation API
+   */
+  static async analyzeEquipmentUpgrades(
+    character: CharacterStats,
+    request: UpgradeAnalysisRequest,
+    rawCharacterData?: string | null
+  ): Promise<UpgradeAnalysisResult[]> {
+    try {
+      console.log('🔧 Starting bulk equipment upgrade analysis...');
+
+      const response = await fetch(this.UPGRADE_API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          character,
+          rawCharacterData,
+          targetZone: request.targetZone,
+          optimizeFor: request.optimizeFor,
+          selectedLevels: request.selectedLevels
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upgrade simulation API call failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('🔧 Bulk upgrade analysis complete:', result);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Upgrade simulation failed');
+      }
+
+      // Convert API response to expected format
+      const upgradeResults: UpgradeAnalysisResult[] = result.recommendations.map((rec: {
+        slot: string;
+        currentEnhancement: number;
+        recommendedEnhancement: number;
+        profitIncrease: number;
+        experienceIncrease: number;
+        percentageIncrease: number;
+      }) => {
+        // Get all test results for this slot
+        const slotTests = result.upgradeTests.filter((test: {
+          slot: string;
+          testEnhancement: number;
+          profitPerDay: number;
+          experienceGain: number;
+        }) => test.slot === rec.slot);
+        const allTestResults = slotTests.map((test: {
+          testEnhancement: number;
+          profitPerDay: number;
+          experienceGain: number;
+        }) => ({
+          enhancement: test.testEnhancement,
+          profit: test.profitPerDay,
+          exp: test.experienceGain
+        }));
+
+        return {
+          slot: rec.slot,
+          currentEnhancement: rec.currentEnhancement,
+          recommendedEnhancement: rec.recommendedEnhancement,
+          improvement: {
+            profitIncrease: rec.profitIncrease,
+            expIncrease: rec.experienceIncrease,
+            percentageIncrease: rec.percentageIncrease
+          },
+          allTestResults
+        };
+      });
+
+      return upgradeResults;
+
+    } catch (error) {
+      console.error('Failed to analyze equipment upgrades:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Analyze equipment upgrades with real-time streaming updates
+   */
+  static async analyzeEquipmentUpgradesStream(
+    character: CharacterStats,
+    request: UpgradeAnalysisRequest,
+    rawCharacterData: string | null,
+    onUpdate: (event: StreamEvent) => void
+  ): Promise<void> {
+    try {
+      const response = await fetch('/api/combat-upgrade-simulation/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          character,
+          rawCharacterData,
+          targetZone: request.targetZone,
+          optimizeFor: request.optimizeFor,
+          selectedLevels: request.selectedLevels
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Stream request failed: ${response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error('No response body for stream');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete messages in the buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonData = line.slice(6); // Remove 'data: ' prefix
+                if (jsonData.trim()) {
+                  const data = JSON.parse(jsonData);
+                  onUpdate(data);
+
+                  if (data.type === 'simulation_complete' || data.type === 'error') {
+                    if (data.type === 'error') {
+                      throw new Error(data.error);
+                    }
+                    return;
+                  }
+                }
+              } catch (parseError) {
+                console.error('Failed to parse stream data:', parseError);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    } catch (error) {
+      console.error('Stream error:', error);
+      throw error;
+    }
   }
 }

@@ -132,4 +132,51 @@ export class MarketplaceService {
       console.error('Error clearing stored marketplace data:', error);
     }
   }
+
+  /**
+   * Get the marketplace price for a specific item by name and enhancement level
+   */
+  public static async getItemPrice(itemName: string, enhancementLevel: number): Promise<number | null> {
+    try {
+      const marketData = await this.getMarketplaceData();
+
+      // Convert item name to itemHrid format (reverse of parseItemName)
+      const itemHrid = `/items/${itemName.toLowerCase().replace(/ /g, '_')}`;
+
+      console.log(`🔍 MARKETPLACE SEARCH:`);
+      console.log(`   Input: itemName="${itemName}", enhancementLevel=${enhancementLevel}`);
+      console.log(`   Converted to: itemHrid="${itemHrid}"`);
+      console.log(`   Total marketplace items: ${marketData.items.length}`);
+
+      // Find matching items by itemHrid (ignore enhancement level first)
+      const matchingItems = marketData.items.filter(item => item.itemHrid === itemHrid);
+      console.log(`   Items with matching itemHrid: ${matchingItems.length}`);
+
+      if (matchingItems.length > 0) {
+        console.log(`   Available enhancement levels for this item:`, matchingItems.map(item => `+${item.enhancementLevel}`).join(', '));
+
+        // Now find the specific enhancement level
+        const exactMatch = matchingItems.find(item => item.enhancementLevel === enhancementLevel);
+
+        if (exactMatch) {
+          console.log(`💰 FOUND: ${exactMatch.price.toLocaleString()}c for ${itemName} +${enhancementLevel}`);
+          return exactMatch.price;
+        } else {
+          console.log(`❌ ENHANCEMENT LEVEL NOT FOUND: ${itemName} +${enhancementLevel} (item exists but not at this level)`);
+          return null;
+        }
+      } else {
+        console.log(`❌ ITEM NOT FOUND: No items found with itemHrid="${itemHrid}"`);
+
+        // Show a sample of available items for debugging
+        const sampleItems = marketData.items.slice(0, 5).map(item => `${item.itemHrid} +${item.enhancementLevel}`);
+        console.log(`   Sample marketplace items:`, sampleItems);
+
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ ERROR getting price for ${itemName} +${enhancementLevel}:`, error);
+      return null;
+    }
+  }
 }

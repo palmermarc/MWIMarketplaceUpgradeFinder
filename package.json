@@ -12,7 +12,6 @@
   "dependencies": {
     "next": "15.5.3",
     "puppeteer": "^24.22.0",
-    "puppeteer-cluster": "^0.24.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
