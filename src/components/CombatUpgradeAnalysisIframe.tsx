@@ -452,11 +452,29 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
               console.log('Upgrade tests:', event.upgradeTests);
 
               // Convert recommendations to UpgradeAnalysisResult format
-              const results = event.recommendations?.map((rec: any) => {
+              const results = event.recommendations?.map((rec: {
+                slot: string;
+                currentEnhancement: number;
+                recommendedEnhancement: number;
+                profitIncrease: number;
+                experienceIncrease: number;
+                percentageIncrease: number;
+                enhancementCost?: number;
+                paybackDays?: number;
+              }) => {
                 console.log(`Processing recommendation for ${rec.slot}:`, rec);
 
-                const slotTests = event.upgradeTests?.filter((test: any) => test.slot === rec.slot) || [];
-                const allTestResults = slotTests.map((test: any) => ({
+                const slotTests = event.upgradeTests?.filter((test: {
+                  slot: string;
+                  testEnhancement: number;
+                  profitPerDay: number;
+                  experienceGain: number;
+                }) => test.slot === rec.slot) || [];
+                const allTestResults = slotTests.map((test: {
+                  testEnhancement: number;
+                  profitPerDay: number;
+                  experienceGain: number;
+                }) => ({
                   enhancement: test.testEnhancement,
                   profit: test.profitPerDay,
                   exp: test.experienceGain

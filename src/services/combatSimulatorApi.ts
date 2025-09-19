@@ -65,16 +65,41 @@ export interface StreamEvent {
   currentLevel?: number;
   simulationCount?: number;
   totalSimulations?: number;
-  result?: any;
+  result?: {
+    testEnhancement: number;
+    experienceGain: number;
+    profitPerDay: number;
+  };
   expIncrease?: number;
   profitIncrease?: number;
   enhancementCost?: number;
   paybackDays?: number;
   error?: string;
-  testPlan?: any[];
-  baselineResults?: any;
-  upgradeTests?: any[];
-  recommendations?: any[];
+  testPlan?: {
+    slot: string;
+    currentLevel: number;
+    testLevels: number[];
+  }[];
+  baselineResults?: {
+    experienceGain: number;
+    profitPerDay: number;
+  };
+  upgradeTests?: {
+    slot: string;
+    testEnhancement: number;
+    profitPerDay: number;
+    experienceGain: number;
+  }[];
+  recommendations?: {
+    slot: string;
+    currentEnhancement: number;
+    recommendedEnhancement: number;
+    profitIncrease: number;
+    experienceIncrease: number;
+    percentageIncrease: number;
+    enhancementCost?: number;
+    paybackDays?: number;
+  }[];
 }
 
 export class CombatSimulatorApiService {

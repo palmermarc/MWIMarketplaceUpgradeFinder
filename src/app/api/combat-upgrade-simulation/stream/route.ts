@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       // Helper function to safely enqueue data
-      const safeEnqueue = (data: any) => {
+      const safeEnqueue = (data: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
           return true;
