@@ -26,7 +26,6 @@ export async function launchBrowser(options: PuppeteerLaunchOptions = {}): Promi
       ...options,
       args: chromium.args,
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
       ignoreHTTPSErrors: true,
     };
 
