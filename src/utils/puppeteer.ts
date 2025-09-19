@@ -5,16 +5,19 @@ export interface PuppeteerLaunchOptions extends LaunchOptions {
 }
 
 export async function launchBrowser(options: PuppeteerLaunchOptions = {}): Promise<Browser> {
+  // Check for server environment (Vercel or any serverless)
   const isVercel = !!process.env.VERCEL;
+  const isServerless = process.env.NODE_ENV === 'production' || isVercel;
 
   console.log('🔍 Environment check:', {
     VERCEL: process.env.VERCEL,
     VERCEL_ENV: process.env.VERCEL_ENV,
     NODE_ENV: process.env.NODE_ENV,
-    isVercel
+    isVercel,
+    isServerless
   });
 
-  if (isVercel) {
+  if (isServerless) {
     // Vercel production environment - use puppeteer-core with @sparticuz/chromium
     const chromium = (await import('@sparticuz/chromium')).default;
     const puppeteer = await import('puppeteer-core');
@@ -28,7 +31,7 @@ export async function launchBrowser(options: PuppeteerLaunchOptions = {}): Promi
       ignoreHTTPSErrors: true,
     };
 
-    console.log('🔧 Launching browser with @sparticuz/chromium for Vercel');
+    console.log('🔧 Launching browser with @sparticuz/chromium for serverless environment');
     return puppeteer.launch(launchOptions);
   } else {
     // Local development - use regular puppeteer
