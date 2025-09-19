@@ -1,7 +1,7 @@
 import type { Browser, LaunchOptions } from 'puppeteer-core';
 
 export interface PuppeteerLaunchOptions extends LaunchOptions {
-  // Add any custom options here
+  timeout?: number;
 }
 
 export async function launchBrowser(options: PuppeteerLaunchOptions = {}): Promise<Browser> {
