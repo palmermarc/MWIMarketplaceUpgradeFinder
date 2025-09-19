@@ -23,7 +23,8 @@
       "Bash(curl:*)",
       "Bash(npx puppeteer browsers:*)",
       "Bash(vercel:*)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:vercel.com)"
     ],
     "deny": [],
     "ask": []

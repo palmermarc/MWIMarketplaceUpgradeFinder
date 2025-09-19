@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
 import { CharacterStats } from '@/types/character';
+import { launchBrowser } from '@/utils/puppeteer';
 
 export interface CombatSimulationResult {
   killsPerHour: number;
@@ -36,30 +36,8 @@ export async function POST(request: NextRequest) {
     });
     console.log('Starting combat simulation for character:', character);
 
-    // Launch Puppeteer browser (HEADLESS for production with Vercel-optimized settings)
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-gpu-sandbox',
-        '--disable-software-rasterizer',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection',
-        '--disable-extensions',
-        '--disable-default-apps',
-        '--disable-component-extensions-with-background-pages',
-        '--window-size=1920,1080'
-      ],
+    // Launch Puppeteer browser using Vercel-compatible utility
+    const browser = await launchBrowser({
       timeout: 60000
     });
 

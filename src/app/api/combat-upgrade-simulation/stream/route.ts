@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
-import puppeteer, { Page } from 'puppeteer';
+import { Page } from 'puppeteer-core';
 import { CharacterStats } from '@/types/character';
 import { MarketplaceService } from '@/services/marketplace';
+import { launchBrowser } from '@/utils/puppeteer';
 
 export interface UpgradeTestResult {
   slot: string;
@@ -162,30 +163,8 @@ export async function POST(request: NextRequest) {
           totalSimulations
         });
 
-        // Launch Puppeteer browser with Vercel-optimized settings
-        const browser = await puppeteer.launch({
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu',
-            '--disable-gpu-sandbox',
-            '--disable-software-rasterizer',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding',
-            '--disable-features=TranslateUI',
-            '--disable-ipc-flooding-protection',
-            '--disable-extensions',
-            '--disable-default-apps',
-            '--disable-component-extensions-with-background-pages',
-            '--window-size=1920,1080'
-          ],
+        // Launch Puppeteer browser using Vercel-compatible utility
+        const browser = await launchBrowser({
           timeout: 60000
         });
 
