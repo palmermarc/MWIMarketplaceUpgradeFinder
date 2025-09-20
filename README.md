@@ -1,112 +1,219 @@
-# Milky Way Idle Marketplace Upgrade Finder
+# MWI Marketplace Upgrade Finder
 
-A Next.js application that helps Milky Way Idle players find optimal equipment upgrades from the marketplace data. Simply import your character data and the app will automatically fetch the latest marketplace prices to suggest the best upgrade opportunities.
+A Next.js application that analyzes combat equipment upgrades for Milky Way Idle using automated browser simulation with Puppeteer.
 
 ## Features
 
-- **Character Import**: Paste your character JSON data for instant analysis
-- **Automatic Marketplace Data**: Fetches real-time pricing from the official API
-- **Smart Caching**: Stores marketplace data locally with timestamp-based updates
-- **Upgrade Analysis**: Finds cost-effective enhancement opportunities
-- **Data Export**: Export combined character and upgrade data for combat simulation apps
+- **Combat Simulation**: Automated testing of equipment configurations using Puppeteer
+- **Upgrade Analysis**: Real-time streaming analysis of equipment upgrade effectiveness
+- **Equipment Comparison**: Side-by-side comparison of different equipment setups
+- **Progress Tracking**: Live progress updates during simulation runs
+- **Vercel Deployment**: Optimized for serverless deployment with API routes
 
-## Getting Started
+## Prerequisites (Windows Setup)
 
-1. **Install dependencies**:
+### 1. Install Node.js
+
+1. Go to [nodejs.org](https://nodejs.org/)
+2. Download the **LTS version** (recommended for most users)
+3. Run the installer (.msi file)
+4. During installation, make sure "Add to PATH" is checked
+5. Restart your computer after installation
+
+### 2. Verify Installation
+
+Open Command Prompt (cmd) or PowerShell and run:
+
+```bash
+node --version
+npm --version
+```
+
+You should see version numbers for both commands.
+
+### 3. Install Git (Optional but Recommended)
+
+1. Go to [git-scm.com](https://git-scm.com/)
+2. Download Git for Windows
+3. Run the installer with default settings
+4. Restart your computer
+
+## Setup Instructions
+
+### 1. Clone or Download the Repository
+
+**Option A: Using Git (if installed)**
+```bash
+git clone <repository-url>
+cd mwimarketplaceupgradefinder
+```
+
+**Option B: Download ZIP**
+1. Download the repository as a ZIP file
+2. Extract it to your desired location
+3. Open Command Prompt and navigate to the folder:
+```bash
+cd path\to\mwimarketplaceupgradefinder
+```
+
+### 2. Install Dependencies
+
+In the project folder, run:
+
 ```bash
 npm install
 ```
 
-2. **Run the development server**:
+This will install all required packages including:
+- Next.js (React framework)
+- Puppeteer (browser automation)
+- TypeScript (type safety)
+- Tailwind CSS (styling)
+
+**Note**: The first install may take several minutes as it downloads Chromium browser for Puppeteer.
+
+### 3. Run the Development Server
+
 ```bash
 npm run dev
 ```
 
-3. **Open your browser**: Navigate to [http://localhost:3000](http://localhost:3000)
+The application will start at [http://localhost:3000](http://localhost:3000)
 
-## How to Use
+### 4. Build for Production (Optional)
 
-1. **Export your character data** from Milky Way Idle game
-2. **Paste the JSON** into the character import field
-3. **Click "Import Character"** - marketplace data loads automatically
-4. **Review upgrade opportunities** sorted by cost efficiency
-5. **Export the data** for use in combat simulation tools
+To create a production build:
 
-## Technology Stack
+```bash
+npm run build
+```
 
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **LocalStorage API** - Client-side data caching
+## Deployment
 
-## Data Sources
+### Vercel Deployment (Recommended)
 
-- Character data: User-provided JSON export from Milky Way Idle
-- Marketplace data: `https://www.milkywayidle.com/game_data/marketplace.json`
+1. Install Vercel CLI:
+```bash
+npm install -g vercel
+```
+
+2. Deploy:
+```bash
+vercel
+```
+
+3. Follow the prompts to link your project to Vercel
+
+The application is optimized for Vercel with:
+- Serverless API routes for combat simulation
+- Puppeteer configured with @sparticuz/chromium
+- Webpack externals for proper bundling
+
+### Alternative: Local Production Server
+
+```bash
+npm run build
+npm start
+```
+
+## API Endpoints
+
+- `GET/POST /api/combat-simulation` - Run combat simulations
+- `GET/POST /api/combat-upgrade-simulation` - Analyze equipment upgrades
+- `GET /api/combat-upgrade-simulation/stream` - Streaming upgrade analysis
+- `GET /api/inspect-simulator` - Inspect simulator state
+- `GET /api/test-puppeteer` - Test Puppeteer functionality
 
 ## Project Structure
 
 ```
 src/
-├── app/                 # Next.js App Router pages
-├── components/          # React components
-├── services/           # API and data services
-└── types/              # TypeScript type definitions
+├── app/
+│   ├── api/                    # API routes
+│   │   ├── combat-simulation/
+│   │   ├── combat-upgrade-simulation/
+│   │   └── inspect-simulator/
+│   ├── page.tsx               # Main page
+│   └── layout.tsx             # Root layout
+├── components/
+│   └── CombatUpgradeAnalysisIframe.tsx  # Main analysis component
+└── services/
+    └── combatSimulatorApi.ts  # API service layer
 ```
 
-## Development
+## Configuration Files
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run export` - Build for static export (GitHub Pages)
-- `npm run lint` - Run ESLint
-- `npm run start` - Start production server
+- `next.config.ts` - Next.js configuration optimized for Vercel
+- `package.json` - Dependencies and scripts
+- `tsconfig.json` - TypeScript configuration
+- `tailwind.config.ts` - Tailwind CSS configuration
 
-## Deployment
+## Troubleshooting
 
-This app is deployed to GitHub Pages using a dedicated `gh-pages` branch for reliable static hosting.
+### Common Issues
 
-### Deployment Method
-- **Source**: `gh-pages` branch (static files only)
-- **Build**: Next.js static export (`npm run export`)
-- **Assets**: All CSS, JS, and fonts served from GitHub Pages CDN
+**1. "npm is not recognized"**
+- Restart your computer after installing Node.js
+- Ensure Node.js was installed with "Add to PATH" checked
 
-### Manual Deployment Process
+**2. "Permission denied" errors**
+- Run Command Prompt as Administrator
+- Or use PowerShell with execution policy: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+**3. Puppeteer installation fails**
+- Ensure you have a stable internet connection
+- Try: `npm install puppeteer --no-optional`
+
+**4. Build errors with Puppeteer**
+- The project is configured for Vercel deployment
+- Local builds may show warnings but should still work
+
+**5. Port 3000 already in use**
+- Kill existing Node processes in Task Manager
+- Or use a different port: `npm run dev -- -p 3001`
+
+### Development Commands
+
 ```bash
-# 1. Build the static export
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linting
+npm run lint
+
+# Export static files
 npm run export
-
-# 2. Switch to gh-pages branch
-git checkout gh-pages
-
-# 3. Replace content with new build
-rm -rf * && cp -r out/* . && touch .nojekyll
-
-# 4. Commit and push
-git add . && git commit -m "Deploy latest build"
-git push origin gh-pages
-
-# 5. Switch back to main
-git checkout main
 ```
 
-### Or use the deployment script
-```bash
-./deploy.sh
-```
+## Technology Stack
 
-### GitHub Pages Setup
-1. Go to repository Settings → Pages
-2. Set Source to "Deploy from a branch"
-3. Select branch: `gh-pages`
-4. Select folder: `/ (root)`
-
-## Live Demo
-
-🌐 **[Try the app live](https://palmermarc.github.io/MWIMarketplaceUpgradeFinder/)**
-
-*Note: All assets (CSS, JavaScript, fonts) now load correctly from the GitHub Pages CDN.*
+- **Framework**: Next.js 15.5.3
+- **Runtime**: React 19.1.0
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4
+- **Automation**: Puppeteer 24.22.0
+- **Deployment**: Vercel (serverless)
+- **Browser**: @sparticuz/chromium (Vercel-optimized)
 
 ## Contributing
 
-This project was built to automate the process of finding equipment upgrades in Milky Way Idle. Feel free to submit issues or pull requests for improvements.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test locally with `npm run dev`
+5. Build to ensure no errors: `npm run build`
+6. Submit a pull request
+
+## License
+
+This project is private and intended for Milky Way Idle community use.
+
+---
+
+For support or questions, please open an issue in the repository.
