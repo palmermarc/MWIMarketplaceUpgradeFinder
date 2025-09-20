@@ -1,15 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Remove static export for Vercel hosting with API routes
-  // output: 'export' is not needed for Vercel
+  // Enable static export for GitHub Pages
+  output: 'export',
 
-  // Exclude Puppeteer packages from bundling for Vercel serverless
-  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+  },
+
+  // Set base path for GitHub Pages (will be repository name)
+  basePath: '/MWIMarketplaceUpgradeFinder',
+
+  // Ensure trailing slash for GitHub Pages
+  trailingSlash: true,
 
   webpack: (config, { isServer }) => {
-    // Server-side: Allow Puppeteer
-    // Client-side: Exclude Puppeteer to prevent bundling issues
+    // Client-side: Exclude server-only packages
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
