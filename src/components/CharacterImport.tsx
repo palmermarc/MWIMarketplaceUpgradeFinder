@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CharacterData, CharacterStats } from '@/types/character';
 import { MarketData } from '@/types/marketplace';
 import { MarketplaceService } from '@/services/marketplace';
 import { COMBAT_ITEMS } from '@/constants/combatItems';
+import { useCharacterStorage, useMarketplaceStorage, useCombatItemsStorage } from '@/hooks/useBrowserStorage';
+import { useMarketplaceAutoLoader } from '@/hooks/useMarketplaceAutoLoader';
 
 interface CharacterImportProps {
   onCharacterImported: (character: CharacterStats, rawData?: string) => void;
@@ -19,6 +21,34 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
   const [importedCharacter, setImportedCharacter] = useState<CharacterStats | null>(null);
   const [isLoadingCombatItems, setIsLoadingCombatItems] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [useStoredData, setUseStoredData] = useState(false);
+
+  // Storage hooks
+  const characterStorage = useCharacterStorage();
+  const marketplaceStorage = useMarketplaceStorage();
+  const combatItemsStorage = useCombatItemsStorage();
+
+  // Auto-loader for marketplace data
+  const marketplaceAutoLoader = useMarketplaceAutoLoader();
+
+  // Check for existing data on mount
+  useEffect(() => {
+    const checkExistingData = async () => {
+      // Use marketplace data from auto-loader (which handles freshness automatically)
+      if (marketplaceAutoLoader.marketData) {
+        console.log('Found marketplace data from auto-loader');
+        onMarketDataLoaded(marketplaceAutoLoader.marketData);
+      }
+
+      // Check if we have combat items data
+      if (combatItemsStorage.combatItems && onCombatItemsLoaded) {
+        console.log('Found combat items data in storage');
+        onCombatItemsLoaded(combatItemsStorage.combatItems.data);
+      }
+    };
+
+    checkExistingData();
+  }, [marketplaceAutoLoader.marketData, combatItemsStorage.combatItems, onMarketDataLoaded, onCombatItemsLoaded]);
 
   const parseItemName = (itemHrid: string): string => {
     return itemHrid.replace('/items/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -79,32 +109,82 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
       setImportedCharacter(transformedData);
       onCharacterImported(transformedData, jsonInput);
 
-      // Update loading message for marketplace data
-      setLoadingMessage('Loading marketplace data...');
-
-      // Auto-load marketplace data
+      // Save character data to storage
+      setLoadingMessage('Saving character data...');
       try {
-        const marketData = await MarketplaceService.getMarketplaceData();
-        onMarketDataLoaded(marketData);
-      } catch (marketError) {
-        console.error('Failed to load marketplace data:', marketError);
+        const characterId = await characterStorage.saveCharacter(
+          transformedData,
+          jsonInput,
+'Imported Character'
+        );
+        console.log(`Character saved to storage with ID: ${characterId}`);
+      } catch (storageError) {
+        console.error('Failed to save character to storage:', storageError);
+        // Don't fail the import if storage fails
+      }
+
+      // Update loading message for marketplace data
+      setLoadingMessage('Checking marketplace data...');
+
+      // Use marketplace data from auto-loader (which handles freshness automatically)
+      if (marketplaceAutoLoader.marketData) {
+        console.log('Using marketplace data from auto-loader');
+        onMarketDataLoaded(marketplaceAutoLoader.marketData);
+      } else if (marketplaceAutoLoader.isLoading) {
+        console.log('Auto-loader is still loading marketplace data');
+        setLoadingMessage('Waiting for marketplace data to load...');
+
+        // Wait a bit for auto-loader to finish
+        const maxWaitTime = 10000; // 10 seconds
+        const checkInterval = 500; // 0.5 seconds
+        let waitedTime = 0;
+
+        const waitForMarketData = () => {
+          if (marketplaceAutoLoader.marketData) {
+            console.log('Marketplace data loaded by auto-loader');
+            onMarketDataLoaded(marketplaceAutoLoader.marketData);
+          } else if (waitedTime < maxWaitTime && marketplaceAutoLoader.isLoading) {
+            waitedTime += checkInterval;
+            setTimeout(waitForMarketData, checkInterval);
+          } else {
+            console.warn('Auto-loader did not provide marketplace data in time');
+            setError('Character imported successfully, but marketplace data is still loading');
+          }
+        };
+
+        setTimeout(waitForMarketData, checkInterval);
+      } else if (marketplaceAutoLoader.error) {
+        console.error('Auto-loader failed to load marketplace data:', marketplaceAutoLoader.error);
         setError('Character imported successfully, but failed to load marketplace data');
       }
 
       // Character and marketplace loading is done - clear primary loading
       setIsLoading(false);
 
-      // Load combat items from constants (this continues independently)
+      // Load combat items (check storage first, then use constants)
       if (onCombatItemsLoaded) {
-        setLoadingMessage('Loading combat items from constants...');
-        console.log('🔧 CHARACTER IMPORT: Loading combat items from constants...');
+        setLoadingMessage('Loading combat items...');
+        console.log('🔧 CHARACTER IMPORT: Loading combat items...');
 
-        // Use the constant instead of API call
-        onCombatItemsLoaded(COMBAT_ITEMS);
+        // Check if we have combat items in storage
+        if (combatItemsStorage.combatItems) {
+          console.log('Using combat items from storage');
+          onCombatItemsLoaded(combatItemsStorage.combatItems.data);
+        } else {
+          // Use constants and save to storage
+          console.log('Loading combat items from constants');
+          onCombatItemsLoaded(COMBAT_ITEMS);
 
-        console.log('✅ CHARACTER IMPORT: Combat items loaded from constants successfully');
-        console.log('📊 Calling onCombatItemsLoaded with constant data...');
-        console.log('🎉 CHARACTER IMPORT: Combat items successfully passed to parent component');
+          // Save to storage for future use
+          try {
+            const combatId = await combatItemsStorage.saveCombatItems(COMBAT_ITEMS, 'constants');
+            console.log(`Combat items saved to storage with ID: ${combatId}`);
+          } catch (storageError) {
+            console.error('Failed to save combat items to storage:', storageError);
+          }
+        }
+
+        console.log('✅ CHARACTER IMPORT: Combat items loaded successfully');
 
         // Combat items loading is complete - clear secondary loading
         setIsLoadingCombatItems(false);
@@ -167,6 +247,123 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
         >
           {(isLoading || isLoadingCombatItems) ? 'Processing...' : 'Import Character'}
         </button>
+
+        {/* Stored Characters Section */}
+        {characterStorage.characters.length > 0 && (
+          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-green-200 mb-4">📂 Stored Characters</h3>
+            <div className="space-y-3">
+              {characterStorage.characters.slice(0, 5).map((storedChar) => (
+                <div
+                  key={storedChar.id}
+                  className="bg-black/20 rounded-lg p-3 border border-green-500/30 flex justify-between items-center"
+                >
+                  <div className="flex-1">
+                    <p className="text-white font-medium">{storedChar.name}</p>
+                    <p className="text-green-300 text-sm">
+                      Saved: {new Date(storedChar.timestamp).toLocaleDateString()} {new Date(storedChar.timestamp).toLocaleTimeString()}
+                    </p>
+                    <p className="text-green-400 text-xs">
+                      Last accessed: {new Date(storedChar.lastAccessed).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        setImportedCharacter(storedChar.data);
+                        onCharacterImported(storedChar.data, storedChar.rawData);
+                        console.log(`Loaded character from storage: ${storedChar.name}`);
+                      } catch (err) {
+                        console.error('Failed to load character from storage:', err);
+                        setError('Failed to load character from storage');
+                      }
+                    }}
+                    disabled={isLoading || isLoadingCombatItems}
+                    className="bg-green-600/20 border border-green-500/50 rounded px-3 py-1 text-green-200 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    Load
+                  </button>
+                </div>
+              ))}
+              {characterStorage.characters.length > 5 && (
+                <p className="text-green-300 text-sm text-center">
+                  ... and {characterStorage.characters.length - 5} more characters
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Storage Status Indicators */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Marketplace Data Status */}
+          <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
+            <h4 className="text-blue-200 font-medium mb-2">🏪 Marketplace Data</h4>
+            {marketplaceAutoLoader.marketData ? (
+              <div className="space-y-1">
+                <p className="text-blue-300 text-sm">
+                  {marketplaceAutoLoader.getStatusText()}
+                </p>
+                <p className="text-blue-400 text-xs">
+                  {marketplaceAutoLoader.isFresh ? '✅ Fresh' : '⚠️ Stale (will refresh automatically)'}
+                </p>
+                <p className="text-blue-400 text-xs">
+                  {marketplaceAutoLoader.marketData.totalItems} items
+                </p>
+                {marketplaceAutoLoader.dataAge && (
+                  <p className="text-blue-500 text-xs">
+                    Age: {marketplaceAutoLoader.dataAge.toFixed(1)} hours
+                  </p>
+                )}
+              </div>
+            ) : marketplaceAutoLoader.isLoading ? (
+              <div className="space-y-1">
+                <p className="text-blue-300 text-sm">Loading marketplace data...</p>
+                <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : marketplaceAutoLoader.error ? (
+              <div className="space-y-1">
+                <p className="text-red-300 text-sm">Error loading data</p>
+                <p className="text-red-400 text-xs">{marketplaceAutoLoader.error}</p>
+              </div>
+            ) : (
+              <p className="text-blue-300 text-sm">Initializing...</p>
+            )}
+          </div>
+
+          {/* Combat Items Status */}
+          <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
+            <h4 className="text-purple-200 font-medium mb-2">⚔️ Combat Items</h4>
+            {combatItemsStorage.combatItems ? (
+              <div className="space-y-1">
+                <p className="text-purple-300 text-sm">
+                  Last updated: {new Date(combatItemsStorage.combatItems.timestamp).toLocaleDateString()}
+                </p>
+                <p className="text-purple-400 text-xs">
+                  Source: {combatItemsStorage.combatItems.source}
+                </p>
+                <p className="text-purple-400 text-xs">
+                  {Object.keys(combatItemsStorage.combatItems.data).length} equipment slots
+                </p>
+              </div>
+            ) : (
+              <p className="text-purple-300 text-sm">No stored data</p>
+            )}
+          </div>
+
+          {/* Storage Stats */}
+          <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
+            <h4 className="text-gray-200 font-medium mb-2">💾 Storage</h4>
+            <div className="space-y-1">
+              <p className="text-gray-300 text-sm">
+                Characters: {characterStorage.characters.length}
+              </p>
+              <p className="text-gray-400 text-xs">
+                Total stored items: {characterStorage.characters.length + (marketplaceStorage.marketData ? 1 : 0) + (combatItemsStorage.combatItems ? 1 : 0)}
+              </p>
+            </div>
+          </div>
+        </div>
 
         {importedCharacter && (
           <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">

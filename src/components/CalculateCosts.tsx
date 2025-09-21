@@ -334,109 +334,127 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
       <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
             <h4 className="text-md font-bold text-blue-200 mb-3 text-center">⚡ Abilities</h4>
 
-            {/* Ability Upgrade Costs Section */}
-            {abilityUpgradeCosts.length > 0 && (
-              <div className="mb-6 space-y-4">
-                {abilityUpgradeCosts.map((upgrade, index) => (
-                  <div key={index} className="bg-black/30 rounded-lg p-4 border border-blue-500/30">
-                    <h5 className="text-blue-200 font-medium mb-3">
-                      In order to raise <span className="text-white font-bold">{upgrade.abilityName}</span> from level <span className="text-white font-bold">{upgrade.fromLevel}</span> to <span className="text-white font-bold">{upgrade.toLevel}</span>, it will require:
-                    </h5>
+            {/* Abilities Grid with Cost Information */}
+            <div className="mb-6 overflow-x-auto">
+              <div className="min-w-full">
+                {/* Header Row */}
+                <div className="grid grid-cols-5 gap-4 mb-4 text-sm font-medium text-blue-200 border-b border-blue-500/30 pb-2">
+                  <div className="text-center">Ability</div>
+                  <div className="text-center">Current → Target</div>
+                  <div className="text-center">Books Required</div>
+                  <div className="text-center">Experience Needed</div>
+                  <div className="text-center">Total Cost</div>
+                </div>
 
-                    <div className="space-y-3">
-                      {/* Books Required */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-purple-300 font-medium">📚 Books:</span>
-                        <span className="text-white">{upgrade.booksRequired.toLocaleString()} {upgrade.bookName}</span>
-                      </div>
+                {/* Ability Rows */}
+                <div className="space-y-3">
+                  {character.abilities.map((characterAbility) => {
+                    // Only show abilities that are equipped (level > 0) and are in our state
+                    if (characterAbility.level === 0 || !abilityLevels[characterAbility.abilityHrid]) return null;
 
-                      {/* Experience Details */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-green-300 font-medium">⭐ Experience:</span>
-                        <span className="text-white">{upgrade.experienceNeeded.toLocaleString()} needed ({upgrade.bookExperienceValue} per book)</span>
-                        {upgrade.excessExperience > 0 && (
-                          <span className="text-gray-400 text-sm">({upgrade.excessExperience.toLocaleString()} excess)</span>
-                        )}
-                      </div>
+                    const abilityInfo = Object.values(ABILITIES_BY_TYPE).flat().find(
+                      ability => ability.hrid === characterAbility.abilityHrid
+                    );
 
-                      {/* Cost from Marketplace */}
-                      {upgrade.totalCost !== undefined ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-yellow-300 font-medium">💰 Total Cost:</span>
-                          <span className="text-white">{upgrade.totalCost.toLocaleString()} coins</span>
-                          <span className="text-gray-400 text-sm">({upgrade.unitPrice?.toLocaleString()} per book)</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-red-300 font-medium">❌ Cost:</span>
-                          <span className="text-gray-400">Not available in marketplace</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    if (!abilityInfo) return null;
 
-            {/* Show abilities in character import order - only equipped ones */}
-            <div className="mb-6">
-              <h5 className="text-lg font-bold text-blue-200 mb-3">
-                Abilities
-              </h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {character.abilities.map((characterAbility) => {
-                  // Only show abilities that are equipped (level > 0) and are in our state
-                  if (characterAbility.level === 0 || !abilityLevels[characterAbility.abilityHrid]) return null;
+                    const abilityLevel = abilityLevels[abilityInfo.hrid];
 
-                  const abilityInfo = Object.values(ABILITIES_BY_TYPE).flat().find(
-                    ability => ability.hrid === characterAbility.abilityHrid
-                  );
+                    // Find the cost calculation for this ability
+                    const upgrade = abilityUpgradeCosts.find(u => u.abilityHrid === abilityInfo.hrid);
 
-                  if (!abilityInfo) return null;
-
-                  const abilityLevel = abilityLevels[abilityInfo.hrid];
-
-                  return (
-                    <div
-                      key={abilityInfo.hrid}
-                      className="bg-black/20 rounded-lg p-3 border border-blue-500/30 text-center"
-                    >
-                      <div className="space-y-2">
-                        <h6 className="text-white font-medium text-sm">
-                          {abilityInfo.displayName}
-                        </h6>
-
-                        <div className="flex justify-center">
-                          <div className="w-12 h-12">
+                    return (
+                      <div
+                        key={abilityInfo.hrid}
+                        className="grid grid-cols-5 gap-4 items-center bg-black/20 rounded-lg p-3 border border-blue-500/30"
+                      >
+                        {/* Column 1: Ability Info */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 flex-shrink-0">
                             <AbilityIcon
                               abilityId={abilityInfo.name}
-                              size={48}
+                              size={40}
                               className="rounded border border-blue-400/50"
                             />
                           </div>
+                          <div className="min-w-0">
+                            <h6 className="text-white font-medium text-sm truncate">
+                              {abilityInfo.displayName}
+                            </h6>
+                          </div>
                         </div>
 
-                        <div className="space-y-1">
-                          <div className="text-xs text-gray-300">
-                            Current: <span className="text-white">{abilityLevel.currentLevel}</span>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs text-gray-300">Target:</label>
+                        {/* Column 2: Current → Target Levels */}
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="text-white font-medium">{abilityLevel.currentLevel}</span>
+                            <span className="text-gray-400">→</span>
                             <input
                               type="number"
                               min="0"
                               max="200"
                               value={abilityLevel.targetLevel}
                               onChange={(e) => updateAbilityTarget(abilityInfo.hrid, parseInt(e.target.value) || abilityLevel.currentLevel)}
-                              className="w-full px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs focus:border-blue-400 focus:outline-none"
+                              className="w-16 px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs text-center focus:border-blue-400 focus:outline-none"
                             />
                           </div>
                         </div>
+
+                        {/* Column 3: Books Required */}
+                        <div className="text-center">
+                          {upgrade ? (
+                            <div>
+                              <div className="text-white font-medium">{upgrade.booksRequired.toLocaleString()}</div>
+                              <div className="text-purple-300 text-xs truncate">{upgrade.bookName}</div>
+                            </div>
+                          ) : abilityLevel.targetLevel > abilityLevel.currentLevel ? (
+                            <div className="text-gray-400 text-sm">Calculating...</div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">-</div>
+                          )}
+                        </div>
+
+                        {/* Column 4: Experience Needed */}
+                        <div className="text-center">
+                          {upgrade ? (
+                            <div>
+                              <div className="text-white font-medium">{upgrade.experienceNeeded.toLocaleString()}</div>
+                              <div className="text-green-300 text-xs">({upgrade.bookExperienceValue} per book)</div>
+                              {upgrade.excessExperience > 0 && (
+                                <div className="text-gray-400 text-xs">+{upgrade.excessExperience.toLocaleString()} excess</div>
+                              )}
+                            </div>
+                          ) : abilityLevel.targetLevel > abilityLevel.currentLevel ? (
+                            <div className="text-gray-400 text-sm">Calculating...</div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">-</div>
+                          )}
+                        </div>
+
+                        {/* Column 5: Total Cost */}
+                        <div className="text-center">
+                          {upgrade ? (
+                            upgrade.totalCost !== undefined ? (
+                              <div>
+                                <div className="text-yellow-300 font-medium">{upgrade.totalCost.toLocaleString()}</div>
+                                <div className="text-gray-400 text-xs">({upgrade.unitPrice?.toLocaleString()} per book)</div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="text-red-300 text-sm">Not available</div>
+                                <div className="text-gray-400 text-xs">in marketplace</div>
+                              </div>
+                            )
+                          ) : abilityLevel.targetLevel > abilityLevel.currentLevel ? (
+                            <div className="text-gray-400 text-sm">Calculating...</div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">-</div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
