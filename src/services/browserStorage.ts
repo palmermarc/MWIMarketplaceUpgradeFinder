@@ -269,6 +269,22 @@ export class BrowserStorageService {
     });
   }
 
+  /**
+   * Delete character data by ID
+   */
+  async deleteCharacterData(id: string): Promise<boolean> {
+    try {
+      const transaction = await this.getTransaction(STORES.CHARACTER_DATA, 'readwrite');
+      const store = transaction.objectStore(STORES.CHARACTER_DATA);
+      await store.delete(id);
+      console.log(`Character ${id} deleted from storage`);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete character:', error);
+      return false;
+    }
+  }
+
   // Marketplace Data Methods
   /**
    * Save marketplace data to storage

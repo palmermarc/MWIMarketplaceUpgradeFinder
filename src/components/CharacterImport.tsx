@@ -267,22 +267,46 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
                       Last accessed: {new Date(storedChar.lastAccessed).toLocaleDateString()}
                     </p>
                   </div>
-                  <button
-                    onClick={async () => {
-                      try {
-                        setImportedCharacter(storedChar.data);
-                        onCharacterImported(storedChar.data, storedChar.rawData);
-                        console.log(`Loaded character from storage: ${storedChar.name}`);
-                      } catch (err) {
-                        console.error('Failed to load character from storage:', err);
-                        setError('Failed to load character from storage');
-                      }
-                    }}
-                    disabled={isLoading || isLoadingCombatItems}
-                    className="bg-green-600/20 border border-green-500/50 rounded px-3 py-1 text-green-200 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    Load
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          setImportedCharacter(storedChar.data);
+                          onCharacterImported(storedChar.data, storedChar.rawData);
+                          console.log(`Loaded character from storage: ${storedChar.name}`);
+                        } catch (err) {
+                          console.error('Failed to load character from storage:', err);
+                          setError('Failed to load character from storage');
+                        }
+                      }}
+                      disabled={isLoading || isLoadingCombatItems}
+                      className="bg-green-600/20 border border-green-500/50 rounded px-3 py-1 text-green-200 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to delete "${storedChar.name}"? This action cannot be undone.`)) {
+                          try {
+                            const success = await characterStorage.deleteCharacter(storedChar.id);
+                            if (success) {
+                              console.log(`Deleted character from storage: ${storedChar.name}`);
+                            } else {
+                              setError('Failed to delete character from storage');
+                            }
+                          } catch (err) {
+                            console.error('Failed to delete character from storage:', err);
+                            setError('Failed to delete character from storage');
+                          }
+                        }
+                      }}
+                      disabled={isLoading || isLoadingCombatItems}
+                      className="bg-red-600/20 border border-red-500/50 rounded px-3 py-1 text-red-200 hover:bg-red-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      title="Delete this character"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               ))}
               {characterStorage.characters.length > 5 && (

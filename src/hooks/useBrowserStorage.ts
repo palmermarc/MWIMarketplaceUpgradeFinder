@@ -66,16 +66,17 @@ export const useCharacterStorage = () => {
   const deleteCharacter = useCallback(async (id: string): Promise<boolean> => {
     setError(null);
     try {
-      // Note: We'd need to add a delete method to the storage service
-      // For now, this is a placeholder
-      console.log('Delete character functionality needs to be implemented');
-      return true;
+      const success = await browserStorage.deleteCharacterData(id);
+      if (success) {
+        await loadCharacters(); // Refresh the list after deletion
+      }
+      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete character');
       console.error('Failed to delete character:', err);
       return false;
     }
-  }, []);
+  }, [loadCharacters]);
 
   // Load characters on mount
   useEffect(() => {
