@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CombatSimulatorApiService, UpgradeAnalysisResult, UpgradeAnalysisRequest } from '@/services/combatSimulatorApi';
 import { UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
+import { CombatSlotItems, COMBAT_ITEMS } from '@/constants/combatItems';
 import { ItemIcon } from './ItemIcon';
+import { SkillIcon } from './SkillIcon';
+import { AbilityIcon } from './AbilityIcon';
 import { MarketplaceService } from '@/services/marketplace';
 
 interface CombatUpgradeAnalysisProps {
   character: CharacterStats;
   upgrades: UpgradeOpportunity[];
   rawCharacterData?: string | null;
+  combatItems?: CombatSlotItems | null;
 }
 
 interface ZoneData {
@@ -103,7 +107,7 @@ const ZONE_DISPLAY_NAMES: { [key: string]: string } = {
   '/actions/combat/infernal_abyss': 'Infernal Abyss'
 };
 
-export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterData }: CombatUpgradeAnalysisProps) {
+export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterData, combatItems = COMBAT_ITEMS }: CombatUpgradeAnalysisProps) {
   const [zoneData, setZoneData] = useState<ZoneData[]>([]);
   const [upgradeResults, setUpgradeResults] = useState<UpgradeAnalysisResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -120,9 +124,160 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
   const [showEquipmentTesting, setShowEquipmentTesting] = useState(false);
   const [baselineResults, setBaselineResults] = useState<{ experienceGain: number; profitPerDay: number } | null>(null);
   const [selectedEnhancementLevels, setSelectedEnhancementLevels] = useState<{ [slot: string]: number }>({});
+  const [displayEnhancementLevels, setDisplayEnhancementLevels] = useState<{ [slot: string]: number }>({});
+  const [additionalSimSlots, setAdditionalSimSlots] = useState<{
+    id: string;
+    slot: string;
+    selectedItem: string;
+    enhancementLevel: number;
+  }[]>([]);
+  const [houseMaxLevels, setHouseMaxLevels] = useState<{ [roomHrid: string]: number }>({});
+  const [showHouses, setShowHouses] = useState(false);
+  const [showAbilities, setShowAbilities] = useState(false);
+  const [showGear, setShowGear] = useState(true);
 
   // Equipment slots to test
   const EQUIPMENT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
+
+  // Initialize display enhancement levels when combat items are loaded
+  useEffect(() => {
+    if (Object.keys(displayEnhancementLevels).length === 0) {
+      const initialLevels: { [slot: string]: number } = {};
+
+      EQUIPMENT_SLOTS.forEach((slot) => {
+        // Map slots to match character equipment data
+        let lookupSlot = slot;
+        if (slot === 'weapon') {
+          lookupSlot = 'main_hand';
+        }
+
+        // Format the slot name for lookup
+        const formattedSlotName = lookupSlot.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const equipmentItem = character.equipment[formattedSlotName];
+
+        // Set to current enhancement level or 0 if no item equipped
+        initialLevels[slot] = equipmentItem?.enhancement || 0;
+      });
+
+      setDisplayEnhancementLevels(initialLevels);
+    }
+  }, [combatItems, character.equipment, displayEnhancementLevels]);
+
+  // Initialize house max levels when character data is available
+  useEffect(() => {
+    if (character.houseRooms && Object.keys(houseMaxLevels).length === 0) {
+      const initialHouseLevels: { [roomHrid: string]: number } = {};
+
+      Object.entries(character.houseRooms).forEach(([roomHrid, currentLevel]) => {
+        initialHouseLevels[roomHrid] = currentLevel;
+      });
+
+      setHouseMaxLevels(initialHouseLevels);
+    }
+  }, [character.houseRooms, houseMaxLevels]);
+
+  // Function to parse house name from roomHrid
+  const parseHouseName = (roomHrid: string): string => {
+    return roomHrid.replace('/house_rooms/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Function to map house room to skill icon
+  const getHouseRoomIcon = (roomHrid: string): string => {
+    const roomType = roomHrid.replace('/house_rooms/', '').toLowerCase();
+
+    // Map house room types to their associated skillsets
+    const iconMap: { [key: string]: string } = {
+      'dairy_barn': 'milking',
+      'garden': 'foraging',
+      'log_shed': 'woodcutting',
+      'forge': 'cheesesmithing', // Note: using cheesesmithing instead of cheesemaking
+      'workshop': 'crafting',
+      'sewing_parlor': 'tailoring',
+      'kitchen': 'cooking',
+      'brewery': 'brewing',
+      'laboratory': 'alchemy',
+      'observatory': 'enhancing',
+      'dining_room': 'stamina',
+      'library': 'intelligence',
+      'dojo': 'attack',
+      'armory': 'defense',
+      'gym': 'melee',
+      'archery_range': 'ranged',
+      'mystical_study': 'magic'
+    };
+
+    return iconMap[roomType] || 'crafting'; // Default to crafting icon for unmapped rooms
+  };
+
+  // Function to get ordered house rooms
+  const getOrderedHouseRooms = (): [string, number][] => {
+    const roomOrder = [
+      'dairy_barn',
+      'garden',
+      'log_shed',
+      'forge',
+      'workshop',
+      'sewing_parlor',
+      'kitchen',
+      'brewery',
+      'laboratory',
+      'observatory',
+      'dining_room',
+      'library',
+      'dojo',
+      'armory',
+      'gym',
+      'archery_range',
+      'mystical_study'
+    ];
+
+    const orderedRooms: [string, number][] = [];
+
+    // Add rooms in the specified order if they exist in character data
+    roomOrder.forEach(roomType => {
+      const roomHrid = `/house_rooms/${roomType}`;
+      if (character.houseRooms[roomHrid] !== undefined) {
+        orderedRooms.push([roomHrid, character.houseRooms[roomHrid]]);
+      }
+    });
+
+    // Add any remaining rooms that weren't in the ordered list
+    Object.entries(character.houseRooms).forEach(([roomHrid, level]) => {
+      const roomType = roomHrid.replace('/house_rooms/', '');
+      if (!roomOrder.includes(roomType)) {
+        orderedRooms.push([roomHrid, level]);
+      }
+    });
+
+    return orderedRooms;
+  };
+
+  // Function to add a new sim slot for a specific equipment slot
+  const addSimSlot = (slot: string) => {
+    const newId = `${slot}_sim_${Date.now()}`;
+    const newSimSlot = {
+      id: newId,
+      slot: slot,
+      selectedItem: '', // Will be set to first available item
+      enhancementLevel: 0
+    };
+
+    setAdditionalSimSlots(prev => [...prev, newSimSlot]);
+  };
+
+  // Function to remove a sim slot
+  const removeSimSlot = (id: string) => {
+    setAdditionalSimSlots(prev => prev.filter(slot => slot.id !== id));
+  };
+
+  // Function to update a sim slot
+  const updateSimSlot = (id: string, updates: Partial<{ selectedItem: string; enhancementLevel: number }>) => {
+    setAdditionalSimSlots(prev =>
+      prev.map(slot =>
+        slot.id === id ? { ...slot, ...updates } : slot
+      )
+    );
+  };
 
   // Function to parse raw character data and create equipment display data
   const parseEquipmentData = (): EquipmentItem[] => {
@@ -572,6 +727,316 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
 
   return (
     <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
+      {/* Currently Equipped Items - Always show since we have combat items constants */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-purple-200">⚔️ Combat Simulations</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowGear(!showGear)}
+                className="px-3 py-1 text-xs bg-purple-600/20 border border-purple-500/50 rounded text-purple-200 hover:bg-purple-600/30 transition-colors"
+              >
+                {showGear ? 'Hide Gear' : 'Show Gear'}
+              </button>
+              <button
+                onClick={() => setShowHouses(!showHouses)}
+                className="px-3 py-1 text-xs bg-green-600/20 border border-green-500/50 rounded text-green-200 hover:bg-green-600/30 transition-colors"
+              >
+                {showHouses ? 'Hide Houses' : 'Show Houses'}
+              </button>
+              <button
+                onClick={() => setShowAbilities(!showAbilities)}
+                className="px-3 py-1 text-xs bg-blue-600/20 border border-blue-500/50 rounded text-blue-200 hover:bg-blue-600/30 transition-colors"
+              >
+                {showAbilities ? 'Hide Abilities' : 'Show Abilities'}
+              </button>
+            </div>
+          </div>
+
+          {/* Houses Section */}
+          {showHouses && Object.keys(character.houseRooms).length > 0 && (
+            <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 mb-4">
+              <h4 className="text-md font-bold text-green-200 mb-3">🏠 Houses</h4>
+              <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-4">
+                {getOrderedHouseRooms().map(([roomHrid, currentLevel]) => (
+                  <div
+                    key={roomHrid}
+                    className="bg-black/20 rounded-lg p-3 border border-green-500/30 text-center"
+                  >
+                    <div className="space-y-2">
+                      {/* House Name */}
+                      <h5 className="text-white font-medium capitalize text-sm">
+                        {parseHouseName(roomHrid)}
+                      </h5>
+
+                      {/* House Icon */}
+                      <div className="flex justify-center">
+                        <div className="w-10 h-10">
+                          <SkillIcon
+                            skillId={getHouseRoomIcon(roomHrid)}
+                            size={40}
+                            className="rounded border border-green-400/50"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Maximum Level Input */}
+                      <div className="flex justify-center">
+                        <input
+                          type="number"
+                          min="0"
+                          max="8"
+                          value={houseMaxLevels[roomHrid] || 0}
+                          onChange={(e) => {
+                            const newLevel = Math.min(8, Math.max(0, parseInt(e.target.value) || 0));
+                            setHouseMaxLevels(prev => ({
+                              ...prev,
+                              [roomHrid]: newLevel
+                            }));
+                          }}
+                          className="w-16 px-2 py-1 bg-black/30 border border-green-500/50 rounded text-white text-xs text-center focus:border-green-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Abilities Section */}
+          {showAbilities && character.abilities.length > 0 && (
+            <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
+              <h4 className="text-md font-bold text-blue-200 mb-3 text-center">⚡ Abilities</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 justify-items-center">
+                {/* Empty first column for centering */}
+                <div className="hidden lg:block"></div>
+                {character.abilities.map((ability, index) => {
+                  // Extract ability name from "/abilities/ability_name" format
+                  const abilityName = ability.abilityHrid.replace('/abilities/', '');
+                  // Format name for display: capitalize and replace underscores with spaces
+                  const displayName = abilityName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                  return (
+                    <div
+                      key={index}
+                      className="bg-black/20 rounded-lg p-3 border border-blue-500/30 text-center w-full"
+                    >
+                      <div className="space-y-2">
+                        {/* Ability Name */}
+                        <h5 className="text-white font-medium text-sm">
+                          {displayName}
+                        </h5>
+
+                        {/* Ability Icon */}
+                        <div className="flex justify-center">
+                          <div className="w-12 h-12">
+                            <AbilityIcon
+                              abilityId={abilityName}
+                              size={48}
+                              className="rounded border border-blue-400/50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Ability Level Input */}
+                        <div className="flex justify-center">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={ability.level}
+                            readOnly
+                            className="w-16 px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs text-center focus:border-blue-400 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Gear Section */}
+          {showGear && (
+          <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {EQUIPMENT_SLOTS.map((slot) => {
+              // Map slots to match character equipment data
+              // The character import converts /item_locations/main_hand to "Main Hand" but we use "weapon" in EQUIPMENT_SLOTS
+              let lookupSlot = slot;
+              if (slot === 'weapon') {
+                lookupSlot = 'main_hand';
+              } else if (slot === 'off_hand') {
+                lookupSlot = 'off_hand'; // This should already match
+              }
+
+              // Format the slot name for lookup (convert to Title Case like the import does)
+              const formattedSlotName = lookupSlot.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+              const equipmentItem = character.equipment[formattedSlotName];
+
+              return (
+                <div
+                  key={slot}
+                  className="bg-black/20 rounded-lg p-3 border border-purple-500/30"
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Item Icon */}
+                    <div className="w-10 h-10 flex-shrink-0">
+                      {equipmentItem && equipmentItem.item !== '' ? (
+                        <ItemIcon
+                          itemHrid={`/items/${equipmentItem.item.toLowerCase().replace(/\s+/g, '_')}`}
+                          size={40}
+                          className="rounded border border-purple-400/50"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-600 rounded border border-gray-500 flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">Empty</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Item Info */}
+                    <div className="flex-1">
+                      <h5 className="text-white font-medium capitalize text-sm">
+                        {slot.replace('_', ' ')}
+                      </h5>
+                      {equipmentItem && equipmentItem.item !== '' ? (
+                        <div>
+                          <p className="text-purple-200 text-xs">
+                            {equipmentItem.item}
+                          </p>
+                          <button
+                            onClick={() => addSimSlot(slot)}
+                            className="text-blue-400 hover:text-blue-300 text-xs mt-1 underline transition-colors"
+                          >
+                            Sim another {slot.replace('_', ' ')}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-xs">No item equipped</p>
+                      )}
+                    </div>
+
+                    {/* Enhancement Level Input - Right Side */}
+                    {equipmentItem && equipmentItem.item !== '' && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-purple-200 text-xs font-medium">
+                          Enhancement:
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={displayEnhancementLevels[slot] || 0}
+                          onChange={(e) => {
+                            const newLevel = Math.min(20, Math.max(0, parseInt(e.target.value) || 0));
+                            setDisplayEnhancementLevels(prev => ({
+                              ...prev,
+                              [slot]: newLevel
+                            }));
+                          }}
+                          className="w-16 px-2 py-1 bg-black/30 border border-purple-500/50 rounded text-white text-xs focus:border-purple-400 focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Additional Sim Slots */}
+          {additionalSimSlots.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-md font-bold text-purple-200 mb-3">⚙️ Additional Simulations</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {additionalSimSlots.map((simSlot) => {
+                  // Get available items for this slot from combat items
+                  const availableItems = combatItems?.[simSlot.slot] || {};
+                  const itemOptions = Object.entries(availableItems);
+
+                  return (
+                    <div
+                      key={simSlot.id}
+                      className="bg-black/20 rounded-lg p-3 border border-blue-500/30"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          {/* Item Icon */}
+                          <div className="w-10 h-10 flex-shrink-0">
+                            {simSlot.selectedItem ? (
+                              <ItemIcon
+                                itemHrid={simSlot.selectedItem}
+                                size={40}
+                                className="rounded border border-blue-400/50"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-600 rounded border border-gray-500 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs">Select</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Slot Info */}
+                          <div className="flex-1">
+                            <h5 className="text-white font-medium capitalize text-sm">
+                              {simSlot.slot.replace('_', ' ')} Simulation
+                            </h5>
+                            <button
+                              onClick={() => removeSimSlot(simSlot.id)}
+                              className="text-red-400 hover:text-red-300 text-xs underline transition-colors"
+                            >
+                              Remove simulation
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Item Selection Dropdown */}
+                        <div>
+                          <select
+                            value={simSlot.selectedItem}
+                            onChange={(e) => updateSimSlot(simSlot.id, { selectedItem: e.target.value })}
+                            className="w-full p-2 bg-black/30 border border-blue-500/50 rounded text-white text-xs focus:border-blue-400 focus:outline-none"
+                          >
+                            <option value="">Select an item...</option>
+                            {itemOptions.map(([itemHrid, itemName]) => (
+                              <option key={itemHrid} value={itemHrid}>
+                                {itemName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Max Enhancement Level Input */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-blue-200 text-xs font-medium">
+                            Max Enhancement:
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={simSlot.enhancementLevel}
+                            onChange={(e) => {
+                              const newLevel = Math.min(20, Math.max(0, parseInt(e.target.value) || 0));
+                              updateSimSlot(simSlot.id, { enhancementLevel: newLevel });
+                            }}
+                            className="w-16 px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs focus:border-blue-400 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          </>
+          )}
+        </div>
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-purple-200">Combat Zone Analysis</h3>
         <button

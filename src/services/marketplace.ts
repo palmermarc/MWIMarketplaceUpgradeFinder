@@ -153,24 +153,53 @@ export class MarketplaceService {
       console.log(`   Items with matching itemHrid: ${matchingItems.length}`);
 
       if (matchingItems.length > 0) {
-        console.log(`   Available enhancement levels for this item:`, matchingItems.map(item => `+${item.enhancementLevel}`).join(', '));
+        console.log(`   Available enhancement levels for this item:`, matchingItems.map(item => `+${item.enhancementLevel} (${item.price.toLocaleString()}c)`).join(', '));
+
+        // Show all matching items with full details
+        console.log(`   📋 All matching marketplace entries:`);
+        matchingItems.forEach((item, index) => {
+          console.log(`      [${index}] +${item.enhancementLevel}: ${item.price.toLocaleString()}c (itemHrid: "${item.itemHrid}", itemName: "${item.itemName}")`);
+        });
 
         // Now find the specific enhancement level
-        const exactMatch = matchingItems.find(item => item.enhancementLevel === enhancementLevel);
+        console.log(`   🎯 Looking for exact match: enhancementLevel === ${enhancementLevel}`);
+        const exactMatch = matchingItems.find(item => {
+          const isMatch = item.enhancementLevel === enhancementLevel;
+          console.log(`      Checking: ${item.enhancementLevel} === ${enhancementLevel} ? ${isMatch}`);
+          return isMatch;
+        });
 
         if (exactMatch) {
-          console.log(`💰 FOUND: ${exactMatch.price.toLocaleString()}c for ${itemName} +${enhancementLevel}`);
+          console.log(`💰 FOUND EXACT MATCH: ${exactMatch.price.toLocaleString()}c for ${itemName} +${enhancementLevel}`);
+          console.log(`   ✅ Match details:`, {
+            itemHrid: exactMatch.itemHrid,
+            itemName: exactMatch.itemName,
+            enhancementLevel: exactMatch.enhancementLevel,
+            price: exactMatch.price,
+            priceFormatted: exactMatch.price.toLocaleString() + 'c'
+          });
           return exactMatch.price;
         } else {
           console.log(`❌ ENHANCEMENT LEVEL NOT FOUND: ${itemName} +${enhancementLevel} (item exists but not at this level)`);
+          console.log(`   Available levels: ${matchingItems.map(item => item.enhancementLevel).sort((a, b) => a - b).join(', ')}`);
           return null;
         }
       } else {
         console.log(`❌ ITEM NOT FOUND: No items found with itemHrid="${itemHrid}"`);
 
         // Show a sample of available items for debugging
-        const sampleItems = marketData.items.slice(0, 5).map(item => `${item.itemHrid} +${item.enhancementLevel}`);
-        console.log(`   Sample marketplace items:`, sampleItems);
+        const sampleItems = marketData.items.slice(0, 10).map(item => `${item.itemHrid} +${item.enhancementLevel} (${item.price.toLocaleString()}c)`);
+        console.log(`   📋 Sample marketplace items (first 10):`, sampleItems);
+
+        // Show items with similar names for debugging
+        const similarItems = marketData.items
+          .filter(item => item.itemName.toLowerCase().includes(itemName.toLowerCase()) || item.itemHrid.toLowerCase().includes(itemName.toLowerCase()))
+          .slice(0, 5)
+          .map(item => `"${item.itemName}" (${item.itemHrid}) +${item.enhancementLevel}`);
+
+        if (similarItems.length > 0) {
+          console.log(`   🔍 Items with similar names:`, similarItems);
+        }
 
         return null;
       }

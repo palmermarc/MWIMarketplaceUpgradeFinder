@@ -90,26 +90,7 @@ npm run build
 
 ## Deployment
 
-### Vercel Deployment (Recommended)
-
-1. Install Vercel CLI:
-```bash
-npm install -g vercel
-```
-
-2. Deploy:
-```bash
-vercel
-```
-
-3. Follow the prompts to link your project to Vercel
-
-The application is optimized for Vercel with:
-- Serverless API routes for combat simulation
-- Puppeteer configured with @sparticuz/chromium
-- Webpack externals for proper bundling
-
-### Alternative: Local Production Server
+### Local Production Server (Recommended)
 
 ```bash
 npm run build

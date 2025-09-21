@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // output: 'export' is not needed for Vercel
 
   // Exclude Puppeteer packages from bundling for Vercel serverless
-  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
 
   webpack: (config, { isServer }) => {
     // Server-side: Allow Puppeteer

@@ -4,17 +4,21 @@ import { useState } from 'react';
 import { CharacterData, CharacterStats } from '@/types/character';
 import { MarketData } from '@/types/marketplace';
 import { MarketplaceService } from '@/services/marketplace';
+import { COMBAT_ITEMS } from '@/constants/combatItems';
 
 interface CharacterImportProps {
   onCharacterImported: (character: CharacterStats, rawData?: string) => void;
   onMarketDataLoaded: (data: MarketData) => void;
+  onCombatItemsLoaded?: (combatItems: { [slot: string]: { [itemHrid: string]: string } }) => void;
 }
 
-export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: CharacterImportProps) {
+export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCombatItemsLoaded }: CharacterImportProps) {
   const [jsonInput, setJsonInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importedCharacter, setImportedCharacter] = useState<CharacterStats | null>(null);
+  const [isLoadingCombatItems, setIsLoadingCombatItems] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   const parseItemName = (itemHrid: string): string => {
     return itemHrid.replace('/items/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -60,7 +64,9 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
 
   const handleImport = async () => {
     setIsLoading(true);
+    setIsLoadingCombatItems(true);
     setError(null);
+    setLoadingMessage('Importing Character and Loading Items');
 
     try {
       const characterData: CharacterData = JSON.parse(jsonInput);
@@ -73,6 +79,9 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
       setImportedCharacter(transformedData);
       onCharacterImported(transformedData, jsonInput);
 
+      // Update loading message for marketplace data
+      setLoadingMessage('Loading marketplace data...');
+
       // Auto-load marketplace data
       try {
         const marketData = await MarketplaceService.getMarketplaceData();
@@ -81,20 +90,45 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
         console.error('Failed to load marketplace data:', marketError);
         setError('Character imported successfully, but failed to load marketplace data');
       }
+
+      // Character and marketplace loading is done - clear primary loading
+      setIsLoading(false);
+
+      // Load combat items from constants (this continues independently)
+      if (onCombatItemsLoaded) {
+        setLoadingMessage('Loading combat items from constants...');
+        console.log('🔧 CHARACTER IMPORT: Loading combat items from constants...');
+
+        // Use the constant instead of API call
+        onCombatItemsLoaded(COMBAT_ITEMS);
+
+        console.log('✅ CHARACTER IMPORT: Combat items loaded from constants successfully');
+        console.log('📊 Calling onCombatItemsLoaded with constant data...');
+        console.log('🎉 CHARACTER IMPORT: Combat items successfully passed to parent component');
+
+        // Combat items loading is complete - clear secondary loading
+        setIsLoadingCombatItems(false);
+        setLoadingMessage('');
+      } else {
+        // No combat items loading callback provided
+        setIsLoadingCombatItems(false);
+        setLoadingMessage('');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse character data');
-    } finally {
+      // Clear all loading states on main error
       setIsLoading(false);
+      setIsLoadingCombatItems(false);
+      setLoadingMessage('');
     }
   };
 
   return (
     <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8">
-      <h2 className="text-2xl font-bold text-white mb-6">Import Character Data</h2>
-      
+     
       <div className="space-y-6">
         <div>
-          <label className="block text-white mb-2">
+          <label className="block text-white text-center mb-2">
             Paste your character JSON export:
           </label>
           <textarea
@@ -105,6 +139,21 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
           />
         </div>
 
+        {/* Spooling effect for loading (both character import and combat items) */}
+        {(isLoading || isLoadingCombatItems) && (
+          <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-blue-200 font-medium">{loadingMessage}</span>
+              </div>
+            </div>
+            <div className="mt-2 text-blue-300 text-sm">
+              Please wait while we process your character and load combat items...
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
             <p className="text-red-200">Error: {error}</p>
@@ -113,10 +162,10 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded }: Cha
 
         <button
           onClick={handleImport}
-          disabled={!jsonInput.trim() || isLoading}
+          disabled={!jsonInput.trim() || isLoading || isLoadingCombatItems}
           className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-{isLoading ? 'Importing & Loading Market Data...' : 'Import Character'}
+          {(isLoading || isLoadingCombatItems) ? 'Processing...' : 'Import Character'}
         </button>
 
         {importedCharacter && (

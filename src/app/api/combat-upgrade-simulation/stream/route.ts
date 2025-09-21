@@ -209,6 +209,15 @@ export async function POST(request: NextRequest) {
 
           await importCharacterData(page, rawCharacterData || JSON.stringify(character));
 
+          // Extract total items for each combat slot after character import
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'status',
+            message: 'Reading total items for each combat slot...',
+            progress: 17
+          })}\n\n`));
+
+          const combatSlotItems = await extractCombatSlotItems(page);
+
           // Run baseline simulation
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'status',
@@ -220,7 +229,8 @@ export async function POST(request: NextRequest) {
 
           safeEnqueue({
             type: 'baseline_complete',
-            baselineResults: baselineResults
+            baselineResults: baselineResults,
+            combatSlotItems: combatSlotItems
           });
 
           const upgradeTests: UpgradeTestResult[] = [];
@@ -464,6 +474,55 @@ async function updateEnhancementField(page: Page, slot: string, level: number) {
     }
     return false;
   }, slot, level);
+}
+
+// Extract total available items for each combat slot from combat simulator
+async function extractCombatSlotItems(page: Page) {
+  console.log('📋 Extracting total available items for each combat slot...');
+
+  const combatSlotItems = await page.evaluate(() => {
+    const COMBAT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
+    const slotItems: { [slot: string]: Array<{ itemHrid: string; itemName: string; }> } = {};
+
+    COMBAT_SLOTS.forEach(slot => {
+      const selectId = `#selectEquipment_${slot}`;
+      const selectElement = document.querySelector(selectId) as HTMLSelectElement;
+
+      console.log(`🔍 Reading all items for slot: ${slot} (${selectId})`);
+
+      if (selectElement) {
+        const items = Array.from(selectElement.options)
+          .filter(opt => opt.value !== '') // Exclude "Empty" option
+          .map(opt => ({
+            itemHrid: opt.value,
+            itemName: opt.text
+          }));
+
+        slotItems[slot] = items;
+        console.log(`  ✅ Found ${items.length} items for ${slot}`);
+      } else {
+        console.log(`  ❌ Select element not found for ${slot}: ${selectId}`);
+        slotItems[slot] = [];
+      }
+    });
+
+    return slotItems;
+  });
+
+  // Log all items found for each slot
+  console.log('🎯 TOTAL COMBAT SLOT ITEMS EXTRACTED:');
+  Object.entries(combatSlotItems).forEach(([slot, items]) => {
+    console.log(`  📦 ${slot.toUpperCase()}: ${items.length} total items available`);
+    items.forEach((item, index) => {
+      console.log(`     [${index + 1}] ${item.itemHrid} - "${item.itemName}"`);
+    });
+    console.log(''); // Empty line for readability
+  });
+
+  console.log('✅ Combat slot items extraction completed');
+  console.log(`📊 SUMMARY: Total items found across all slots: ${Object.values(combatSlotItems).reduce((total, items) => total + items.length, 0)}`);
+
+  return combatSlotItems;
 }
 
 async function runSingleSimulation(page: Page, targetZone: string) {

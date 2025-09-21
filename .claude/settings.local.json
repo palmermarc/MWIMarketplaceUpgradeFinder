@@ -25,7 +25,9 @@
       "Bash(vercel:*)",
       "WebSearch",
       "WebFetch(domain:vercel.com)",
-      "Bash(npx @sparticuz/chromium:*)"
+      "Bash(npx @sparticuz/chromium:*)",
+      "Bash(git restore:*)",
+      "WebFetch(domain:milkywayidle.wiki.gg)"
     ],
     "deny": [],
     "ask": []

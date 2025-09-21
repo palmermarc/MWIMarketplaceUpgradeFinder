@@ -84,6 +84,9 @@ export interface StreamEvent {
     experienceGain: number;
     profitPerDay: number;
   };
+  combatSlotItems?: {
+    [slot: string]: Array<{ itemHrid: string; itemName: string; }>;
+  };
   upgradeTests?: {
     slot: string;
     testEnhancement: number;
@@ -412,4 +415,5 @@ export class CombatSimulatorApiService {
       throw error;
     }
   }
+
 }
