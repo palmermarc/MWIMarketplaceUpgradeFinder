@@ -5,6 +5,7 @@ import { CharacterStats } from '@/types/character';
 import { MarketData } from '@/types/marketplace';
 import { ABILITIES_BY_TYPE, AbilityInfo, calculateAbilityBookCost, AbilityBookCostCalculation } from '@/constants/abilities';
 import { HOUSE_COSTS, calculateHouseUpgradeCost, HouseUpgradeCostCalculation } from '@/constants/houseCosts';
+import { calculateHouseMaterialCosts, ItemCostCalculationResult } from '@/services/itemCostCalculator';
 import { AbilityIcon } from './AbilityIcon';
 import { SkillIcon } from './SkillIcon';
 
@@ -28,6 +29,7 @@ interface AbilityLevel {
 export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
   const [houseRooms, setHouseRooms] = useState<{ [roomHrid: string]: HouseRoom }>({});
   const [abilityLevels, setAbilityLevels] = useState<{ [abilityHrid: string]: AbilityLevel }>({});
+  const [houseMaterialCosts, setHouseMaterialCosts] = useState<{ [roomHrid: string]: ItemCostCalculationResult }>({});
 
   // Convert marketplace data to format expected by ability calculations
   const getMarketplaceData = () => {
@@ -233,6 +235,19 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
     return upgrades;
   }, [abilityLevels, marketData]);
 
+  // Calculate house material costs when house upgrades or marketplace data changes
+  useEffect(() => {
+    const newMaterialCosts: { [roomHrid: string]: ItemCostCalculationResult } = {};
+
+    houseUpgradeCosts.forEach(upgrade => {
+      console.log(`\n🏠 Calculating marketplace costs for ${upgrade.roomName} upgrade...`);
+      const costs = calculateHouseMaterialCosts(upgrade.totalMaterials, marketData);
+      newMaterialCosts[upgrade.roomHrid] = costs;
+    });
+
+    setHouseMaterialCosts(newMaterialCosts);
+  }, [houseUpgradeCosts, marketData]);
+
   return (
     <div className="w-full">
       <div className="mb-6">
@@ -278,6 +293,42 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                           </div>
                         </div>
                       )}
+
+                      {/* Additional Items from Auction House */}
+                      {houseMaterialCosts[upgrade.roomHrid] && (
+                        <div>
+                          <span className="text-blue-300 font-medium mb-2 block">🏪 Additional Items Purchased from AH:</span>
+                          <div className="ml-4 space-y-1">
+                            {houseMaterialCosts[upgrade.roomHrid].hasAllPrices ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-300">Total Cost:</span>
+                                <span className="text-white font-bold">{houseMaterialCosts[upgrade.roomHrid].totalCost.toLocaleString()} coins</span>
+                              </div>
+                            ) : (
+                              <div className="text-red-300 text-sm">
+                                Some items not available in marketplace
+                              </div>
+                            )}
+                            {houseMaterialCosts[upgrade.roomHrid].unavailableItems.length > 0 && (
+                              <div className="text-orange-300 text-xs">
+                                Not available: {houseMaterialCosts[upgrade.roomHrid].unavailableItems.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Additional Items if Crafted Yourself */}
+                      <div>
+                        <span className="text-purple-300 font-medium mb-2 block">🔨 Additional Items if Crafted Yourself:</span>
+                        <div className="ml-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-300">Total Cost:</span>
+                            <span className="text-white">0 coins</span>
+                            <span className="text-gray-400 text-xs">(Future calculation)</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
