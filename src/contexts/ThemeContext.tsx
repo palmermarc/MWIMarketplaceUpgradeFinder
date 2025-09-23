@@ -44,11 +44,11 @@ const themes: Record<ThemeMode, ThemeConfig> = {
     backgroundColor: 'bg-gray-950',
     textColor: 'text-gray-100',
     cardBackground: 'bg-gray-900',
-    borderColor: 'border-gray-700',
-    buttonBackground: 'bg-blue-600',
-    buttonHover: 'hover:bg-blue-700',
+    borderColor: 'border-orange-600',
+    buttonBackground: 'bg-orange-600',
+    buttonHover: 'hover:bg-orange-700',
     inputBackground: 'bg-gray-800',
-    inputBorder: 'border-gray-700'
+    inputBorder: 'border-orange-600'
   }
 };
 
@@ -94,7 +94,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         bodyStyle.backgroundColor = '#f5f5f5';
         break;
       case 'dark':
-        bodyStyle.backgroundColor = '#101010';
+        bodyStyle.backgroundColor = '#36453F'; // Dark green-gray from bookmarks
         break;
       default:
         bodyStyle.backgroundColor = '#111827'; // gray-900

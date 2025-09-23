@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --blood-orange: #E8000A;
+  --blood-orange-dark: #C30008;
+  --dark-green-gray: #36453F;
+  --header-dark: #1a1a1a;
 }
 
 @theme inline {
@@ -12,6 +16,10 @@
   --font-mono: var(--font-geist-mono);
   --font-merriweather: var(--font-merriweather);
   --font-roboto: var(--font-roboto);
+  --color-blood-orange: var(--blood-orange);
+  --color-blood-orange-dark: var(--blood-orange-dark);
+  --color-dark-green-gray: var(--dark-green-gray);
+  --color-header-dark: var(--header-dark);
 }
 
 @media (prefers-color-scheme: dark) {
