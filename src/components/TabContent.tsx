@@ -67,7 +67,6 @@ export function TabContent({
             </div>
             <CombatUpgradeAnalysisIframe
               character={character}
-              upgrades={upgrades}
               rawCharacterData={rawCharacterData}
             />
           </div>

@@ -12,6 +12,12 @@ export function ItemIcon({ itemHrid, className = "", size = 24 }: ItemIconProps)
   const [iconUrl, setIconUrl] = useState<string>('');
 
   useEffect(() => {
+    // Safety check for undefined or invalid itemHrid
+    if (!itemHrid || typeof itemHrid !== 'string') {
+      setIconUrl('');
+      return;
+    }
+
     const getIconId = (hrid: string): string => {
       return hrid.replace('/items/', '').replace(/\//g, '_');
     };

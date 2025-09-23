@@ -1,18 +1,17 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { CombatSimulatorApiService, UpgradeAnalysisResult, UpgradeAnalysisRequest } from '@/services/combatSimulatorApi';
-import { UpgradeOpportunity } from '@/types/marketplace';
+import { CombatSimulatorApiService } from '@/services/combatSimulatorApi';
 import { CharacterStats } from '@/types/character';
 import { CombatSlotItems, COMBAT_ITEMS } from '@/constants/combatItems';
 import { ItemIcon } from './ItemIcon';
 import { SkillIcon } from './SkillIcon';
 import { AbilityIcon } from './AbilityIcon';
 import { MarketplaceService } from '@/services/marketplace';
+import { combatSimulationStorage, SavedCombatSimulation } from '@/services/combatSimulationStorage';
 
 interface CombatUpgradeAnalysisProps {
   character: CharacterStats;
-  upgrades: UpgradeOpportunity[];
   rawCharacterData?: string | null;
   combatItems?: CombatSlotItems | null;
 }
@@ -48,75 +47,97 @@ interface EquipmentItem {
   marketplacePrices: { [level: number]: number | null };
 }
 
-// Zone name mapping for display
-const ZONE_DISPLAY_NAMES: { [key: string]: string } = {
-  '/actions/combat/fly': 'Fly',
-  '/actions/combat/rat': 'Jerry',
-  '/actions/combat/skunk': 'Skunk',
-  '/actions/combat/porcupine': 'Porcupine',
-  '/actions/combat/slimy': 'Slimy',
-  '/actions/combat/smelly_planet': 'Smelly Planet',
-  '/actions/combat/frog': 'Frogger',
-  '/actions/combat/snake': 'Thnake',
-  '/actions/combat/swampy': 'Swampy',
-  '/actions/combat/alligator': 'Sherlock',
-  '/actions/combat/swamp_planet': 'Swamp Planet',
-  '/actions/combat/sea_snail': 'Gary',
-  '/actions/combat/crab': 'I Pinch',
-  '/actions/combat/aquahorse': 'Aquahorse',
-  '/actions/combat/nom_nom': 'Nom Nom',
-  '/actions/combat/turtle': 'Turuto',
-  '/actions/combat/aqua_planet': 'Aqua Planet',
-  '/actions/combat/jungle_sprite': 'Jungle Sprite',
-  '/actions/combat/myconid': 'Myconid',
-  '/actions/combat/treant': 'Treant',
-  '/actions/combat/centaur_archer': 'Centaur Archer',
-  '/actions/combat/jungle_planet': 'Jungle Planet',
-  '/actions/combat/gobo_stabby': 'Stabby',
-  '/actions/combat/gobo_slashy': 'Slashy',
-  '/actions/combat/gobo_smashy': 'Smashy',
-  '/actions/combat/gobo_shooty': 'Shooty',
-  '/actions/combat/gobo_boomy': 'Boomy',
-  '/actions/combat/gobo_planet': 'Gobo Planet',
-  '/actions/combat/eye': 'Eye',
-  '/actions/combat/eyes': 'Eyes',
-  '/actions/combat/veyes': 'Veyes',
-  '/actions/combat/planet_of_the_eyes': 'Planet Of The Eyes',
-  '/actions/combat/novice_sorcerer': 'Novice Sorcerer',
-  '/actions/combat/ice_sorcerer': 'Ice Sorcerer',
-  '/actions/combat/flame_sorcerer': 'Flame Sorcerer',
-  '/actions/combat/elementalist': 'Elementalist',
-  '/actions/combat/sorcerers_tower': "Sorcerer's Tower",
-  '/actions/combat/gummy_bear': 'Gummy Bear',
-  '/actions/combat/panda': 'Panda',
-  '/actions/combat/black_bear': 'Black Bear',
-  '/actions/combat/grizzly_bear': 'Grizzly Bear',
-  '/actions/combat/polar_bear': 'Polar Bear',
-  '/actions/combat/bear_with_it': 'Bear With It',
-  '/actions/combat/magnetic_golem': 'Magnetic Golem',
-  '/actions/combat/stalactite_golem': 'Stalactite Golem',
-  '/actions/combat/granite_golem': 'Granite Golem',
-  '/actions/combat/golem_cave': 'Golem Cave',
-  '/actions/combat/zombie': 'Zombie',
-  '/actions/combat/vampire': 'Vampire',
-  '/actions/combat/werewolf': 'Werewolf',
-  '/actions/combat/twilight_zone': 'Twilight Zone',
-  '/actions/combat/abyssal_imp': 'Abyssal Imp',
-  '/actions/combat/soul_hunter': 'Soul Hunter',
-  '/actions/combat/infernal_warlock': 'Infernal Warlock',
-  '/actions/combat/infernal_abyss': 'Infernal Abyss'
-};
+// Combat zones and their display names
+const COMBAT_ZONES = [
+  { value: '/actions/combat/fly', label: 'Fly' },
+  { value: '/actions/combat/rat', label: 'Jerry' },
+  { value: '/actions/combat/skunk', label: 'Skunk' },
+  { value: '/actions/combat/porcupine', label: 'Porcupine' },
+  { value: '/actions/combat/slimy', label: 'Slimy' },
+  { value: '/actions/combat/smelly_planet', label: 'Smelly Planet' },
+  { value: '/actions/combat/frog', label: 'Frogger' },
+  { value: '/actions/combat/snake', label: 'Thnake' },
+  { value: '/actions/combat/swampy', label: 'Swampy' },
+  { value: '/actions/combat/alligator', label: 'Sherlock' },
+  { value: '/actions/combat/swamp_planet', label: 'Swamp Planet' },
+  { value: '/actions/combat/sea_snail', label: 'Gary' },
+  { value: '/actions/combat/crab', label: 'I Pinch' },
+  { value: '/actions/combat/aquahorse', label: 'Aquahorse' },
+  { value: '/actions/combat/nom_nom', label: 'Nom Nom' },
+  { value: '/actions/combat/turtle', label: 'Turuto' },
+  { value: '/actions/combat/aqua_planet', label: 'Aqua Planet' },
+  { value: '/actions/combat/jungle_sprite', label: 'Jungle Sprite' },
+  { value: '/actions/combat/myconid', label: 'Myconid' },
+  { value: '/actions/combat/treant', label: 'Treant' },
+  { value: '/actions/combat/centaur_archer', label: 'Centaur Archer' },
+  { value: '/actions/combat/jungle_planet', label: 'Jungle Planet' },
+  { value: '/actions/combat/gobo_stabby', label: 'Stabby' },
+  { value: '/actions/combat/gobo_slashy', label: 'Slashy' },
+  { value: '/actions/combat/gobo_smashy', label: 'Smashy' },
+  { value: '/actions/combat/gobo_shooty', label: 'Shooty' },
+  { value: '/actions/combat/gobo_boomy', label: 'Boomy' },
+  { value: '/actions/combat/gobo_planet', label: 'Gobo Planet' },
+  { value: '/actions/combat/eye', label: 'Eye' },
+  { value: '/actions/combat/eyes', label: 'Eyes' },
+  { value: '/actions/combat/veyes', label: 'Veyes' },
+  { value: '/actions/combat/planet_of_the_eyes', label: 'Planet Of The Eyes' },
+  { value: '/actions/combat/novice_sorcerer', label: 'Novice Sorcerer' },
+  { value: '/actions/combat/ice_sorcerer', label: 'Ice Sorcerer' },
+  { value: '/actions/combat/flame_sorcerer', label: 'Flame Sorcerer' },
+  { value: '/actions/combat/elementalist', label: 'Elementalist' },
+  { value: '/actions/combat/sorcerers_tower', label: 'Sorcerer\'s Tower' },
+  { value: '/actions/combat/gummy_bear', label: 'Gummy Bear' },
+  { value: '/actions/combat/panda', label: 'Panda' },
+  { value: '/actions/combat/black_bear', label: 'Black Bear' },
+  { value: '/actions/combat/grizzly_bear', label: 'Grizzly Bear' },
+  { value: '/actions/combat/polar_bear', label: 'Polar Bear' },
+  { value: '/actions/combat/bear_with_it', label: 'Bear With It' },
+  { value: '/actions/combat/magnetic_golem', label: 'Magnetic Golem' },
+  { value: '/actions/combat/stalactite_golem', label: 'Stalactite Golem' },
+  { value: '/actions/combat/granite_golem', label: 'Granite Golem' },
+  { value: '/actions/combat/golem_cave', label: 'Golem Cave' },
+  { value: '/actions/combat/zombie', label: 'Zombie' },
+  { value: '/actions/combat/vampire', label: 'Vampire' },
+  { value: '/actions/combat/werewolf', label: 'Werewolf' },
+  { value: '/actions/combat/twilight_zone', label: 'Twilight Zone' },
+  { value: '/actions/combat/abyssal_imp', label: 'Abyssal Imp' },
+  { value: '/actions/combat/soul_hunter', label: 'Soul Hunter' },
+  { value: '/actions/combat/infernal_warlock', label: 'Infernal Warlock' },
+  { value: '/actions/combat/infernal_abyss', label: 'Infernal Abyss' }
+];
 
-export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterData, combatItems = COMBAT_ITEMS }: CombatUpgradeAnalysisProps) {
+// Combat tiers
+const COMBAT_TIERS = [
+  { value: '0', label: 'T0' },
+  { value: '1', label: 'T1' },
+  { value: '2', label: 'T2' },
+  { value: '3', label: 'T3' },
+  { value: '4', label: 'T4' },
+  { value: '5', label: 'T5' }
+];
+
+// Zone name mapping for backward compatibility
+const ZONE_DISPLAY_NAMES: { [key: string]: string } = Object.fromEntries(
+  COMBAT_ZONES.map(zone => [zone.value, zone.label])
+);
+
+
+export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, combatItems = COMBAT_ITEMS }: CombatUpgradeAnalysisProps) {
   const [zoneData, setZoneData] = useState<ZoneData[]>([]);
-  const [upgradeResults, setUpgradeResults] = useState<UpgradeAnalysisResult[]>([]);
+  const [equipmentTestResults, setEquipmentTestResults] = useState<{ [slot: string]: { level: number; profit: number; exp: number; enhancementCost?: number; paybackDays?: number; itemName?: string; itemHrid?: string }[] }>({});
+  const [abilityTestResults, setAbilityTestResults] = useState<{ [abilityHrid: string]: { level: number; profit: number; exp: number }[] }>({});
+  const [houseTestResults, setHouseTestResults] = useState<{ [roomHrid: string]: { level: number; profit: number; exp: number }[] }>({});
+  const [equipmentRecommendations, setEquipmentRecommendations] = useState<Record<string, unknown>[]>([]);
+  const [abilityRecommendations, setAbilityRecommendations] = useState<Record<string, unknown>[]>([]);
+  const [houseRecommendations, setHouseRecommendations] = useState<Record<string, unknown>[]>([]);
+  const [savedSimulations, setSavedSimulations] = useState<SavedCombatSimulation[]>([]);
+  const [currentSimulationId, setCurrentSimulationId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzingUpgrades, setIsAnalyzingUpgrades] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [optimizeFor, setOptimizeFor] = useState<'profit' | 'exp'>('profit');
-  const [maxEnhancementTiers, setMaxEnhancementTiers] = useState(5);
   const [showZoneTable, setShowZoneTable] = useState(false);
   const [sortColumn, setSortColumn] = useState<string>('no_rng_profit');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -135,6 +156,9 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
   const [showHouses, setShowHouses] = useState(false);
   const [showAbilities, setShowAbilities] = useState(false);
   const [showGear, setShowGear] = useState(true);
+  const [selectedCombatZone, setSelectedCombatZone] = useState<string>('/actions/combat/fly');
+  const [selectedCombatTier, setSelectedCombatTier] = useState<string>('0');
+  const [abilityTargetLevels, setAbilityTargetLevels] = useState<{ [abilityHrid: string]: number }>({});
 
   // Equipment slots to test
   const EQUIPMENT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
@@ -175,6 +199,27 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
       setHouseMaxLevels(initialHouseLevels);
     }
   }, [character.houseRooms, houseMaxLevels]);
+
+  // Initialize ability target levels when character data is available
+  useEffect(() => {
+    if (character.abilities && Object.keys(abilityTargetLevels).length === 0) {
+      const initialAbilityLevels: { [abilityHrid: string]: number } = {};
+
+      character.abilities.forEach((ability) => {
+        initialAbilityLevels[ability.abilityHrid] = ability.level;
+      });
+
+      setAbilityTargetLevels(initialAbilityLevels);
+    }
+  }, [character.abilities, abilityTargetLevels]);
+
+  // Initialize equipment testing data when rawCharacterData is available
+  useEffect(() => {
+    if (rawCharacterData && equipmentTestingData.length === 0) {
+      const equipmentData = parseEquipmentData();
+      setEquipmentTestingData(equipmentData);
+    }
+  }, [rawCharacterData, equipmentTestingData.length]);
 
   // Function to parse house name from roomHrid
   const parseHouseName = (roomHrid: string): string => {
@@ -288,12 +333,20 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
       const equipmentArray = parsedData.player?.equipment || [];
       const initialSelectedLevels: { [slot: string]: number } = {};
 
+      console.log('🔍 Debug - Available equipment in raw data:', equipmentArray.map((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => ({
+        location: item.itemLocationHrid,
+        item: item.itemHrid,
+        level: item.enhancementLevel
+      })));
+
       const equipmentData = EQUIPMENT_SLOTS.map(slot => {
         // Map weapon slot to main_hand for import data lookup (import uses main_hand, simulation uses weapon)
         const lookupSlot = slot === 'weapon' ? 'main_hand' : slot;
         const equipmentItem = equipmentArray.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) =>
           item.itemLocationHrid === `/item_locations/${lookupSlot}`
         );
+
+        console.log(`🔍 Debug - Slot '${slot}' -> lookupSlot '${lookupSlot}' -> Found: ${equipmentItem ? `${equipmentItem.itemHrid} (+${equipmentItem.enhancementLevel})` : 'NOT FOUND'}`);
 
         if (!equipmentItem || !equipmentItem.itemHrid) {
           initialSelectedLevels[slot] = 0;
@@ -338,83 +391,160 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
     }
   };
 
-  const runCombatAnalysis = async () => {
-    setIsAnalyzing(true);
-    setIsInitializing(true);
-    setError(null);
-    setProgress({ current: 0, total: 1 });
+  // runCombatAnalysis function removed - everything now goes through handleFindUpgrades
 
+
+  // Function to save simulation results to IndexedDB
+  const saveSimulationResults = useCallback(async (targetZone: string, targetTier: string, optimizeFor: 'profit' | 'exp') => {
     try {
-      console.log('🎯 BASELINE MODE: Testing current equipment setup...');
-
-      setProgress({ current: 0, total: 1 });
-      setIsInitializing(false);
-
-      // Run baseline simulation to get zone data
-      const results = await CombatSimulatorApiService.runCombatSimulation(character, undefined, rawCharacterData);
-
-      console.log('📊 Zone Results:', results);
-
-      // The results should now be an array of zone data
-      if (Array.isArray(results)) {
-        setZoneData(results);
-      } else {
-        setError('Unexpected data format received from simulation');
+      if (!baselineResults || !character) {
+        console.log('⚠️ Cannot save simulation - missing baseline results or character data');
+        return;
       }
 
-      setProgress({ current: 1, total: 1 });
+      // Calculate summary stats
+      const totalTests = Object.keys(equipmentTestResults).length +
+                        Object.keys(abilityTestResults).length +
+                        Object.keys(houseTestResults).length;
 
-      // After baseline is established, show equipment slots for configuration
-      const equipmentData = parseEquipmentData();
-      setEquipmentTestingData(equipmentData);
-      setShowEquipmentTesting(true);
+      const bestEquipmentUpgrade = equipmentRecommendations.length > 0 ? (equipmentRecommendations[0] as Record<string, unknown>).slot as string : undefined;
+      const bestAbilityUpgrade = abilityRecommendations.length > 0 ? (abilityRecommendations[0] as Record<string, unknown>).abilityName as string : undefined;
+      const bestHouseUpgrade = houseRecommendations.length > 0 ? (houseRecommendations[0] as Record<string, unknown>).roomName as string : undefined;
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to establish baseline');
-    } finally {
-      setIsAnalyzing(false);
-      setIsInitializing(false);
+      const totalPotentialIncrease = [...equipmentRecommendations, ...abilityRecommendations, ...houseRecommendations]
+        .reduce((sum, rec) => sum + ((rec as Record<string, unknown>).profitIncrease as number || 0), 0);
+
+      const simulationData: Omit<SavedCombatSimulation, 'id' | 'timestamp'> = {
+        characterName: 'Combat Character',
+        targetZone,
+        targetTier,
+        optimizeFor,
+        baselineResults,
+        equipmentRecommendations: equipmentRecommendations,
+        abilityRecommendations,
+        houseRecommendations,
+        equipmentTests: equipmentTestResults,
+        abilityTests: abilityTestResults,
+        houseTests: houseTestResults,
+        summary: {
+          totalTests,
+          bestEquipmentUpgrade,
+          bestAbilityUpgrade,
+          bestHouseUpgrade,
+          totalPotentialIncrease
+        }
+      };
+
+      const simulationId = await combatSimulationStorage.saveSimulation(simulationData);
+      setCurrentSimulationId(simulationId);
+
+      console.log(`💾 Saved simulation with ID: ${simulationId}`);
+
+      // Refresh saved simulations list
+      loadSavedSimulations();
+
+    } catch (error) {
+      console.error('Failed to save simulation:', error);
     }
-  };
+  }, [baselineResults, character, equipmentTestResults, abilityTestResults, houseTestResults, equipmentRecommendations, abilityRecommendations, houseRecommendations]);
 
-  const getBestZoneForProfit = (): ZoneData | null => {
-    if (zoneData.length === 0) return null;
+  // Function to load saved simulations
+  const loadSavedSimulations = useCallback(async () => {
+    try {
+      const simulations = await combatSimulationStorage.getAllSimulations();
+      setSavedSimulations(simulations);
+    } catch (error) {
+      console.error('Failed to load saved simulations:', error);
+    }
+  }, []);
 
-    return zoneData.reduce((best, current) => {
-      const currentProfit = parseFloat(current.no_rng_profit.replace(/,/g, '')) || 0;
-      const bestProfit = parseFloat(best.no_rng_profit.replace(/,/g, '')) || 0;
-      return currentProfit > bestProfit ? current : best;
-    });
-  };
+  // Load saved simulations on component mount
+  useEffect(() => {
+    loadSavedSimulations();
+  }, [loadSavedSimulations]);
 
-  const getBestZoneForExp = (): ZoneData | null => {
-    if (zoneData.length === 0) return null;
+  // Function to load a specific simulation
+  const loadSimulation = useCallback(async (simulationId: string) => {
+    try {
+      const simulation = await combatSimulationStorage.getSimulationById(simulationId);
+      if (!simulation) {
+        console.error('Simulation not found:', simulationId);
+        return;
+      }
 
-    return zoneData.reduce((best, current) => {
-      const currentExp = parseFloat(current.total_experience) || 0;
-      const bestExp = parseFloat(best.total_experience) || 0;
-      return currentExp > bestExp ? current : best;
-    });
-  };
+      // Load the simulation data into the component state
+      setBaselineResults(simulation.baselineResults);
+      setEquipmentTestResults(simulation.equipmentTests as unknown as { [slot: string]: { level: number; profit: number; exp: number; enhancementCost?: number; paybackDays?: number; itemName?: string; itemHrid?: string }[] });
+      setEquipmentRecommendations(simulation.equipmentRecommendations);
+      setAbilityRecommendations(simulation.abilityRecommendations);
+      setHouseRecommendations(simulation.houseRecommendations);
+      setAbilityTestResults(simulation.abilityTests as unknown as { [abilityHrid: string]: { level: number; profit: number; exp: number }[] });
+      setHouseTestResults(simulation.houseTests as unknown as { [roomHrid: string]: { level: number; profit: number; exp: number }[] });
+      setCurrentSimulationId(simulationId);
+
+      // Set zone data if available
+      const zoneData = [{
+        zone_name: ZONE_DISPLAY_NAMES[simulation.targetZone] || simulation.targetZone,
+        difficulty: simulation.targetTier,
+        player: 'Loaded Character',
+        encounters: '0',
+        deaths_per_hour: '0',
+        total_experience: simulation.baselineResults.experienceGain.toString(),
+        stamina: '0',
+        intelligence: '0',
+        attack: '0',
+        magic: '0',
+        ranged: '0',
+        melee: '0',
+        defense: '0',
+        no_rng_revenue: '0',
+        expense: '0',
+        no_rng_profit: simulation.baselineResults.profitPerDay.toString()
+      }];
+      setZoneData(zoneData);
+
+      console.log(`📊 Loaded simulation: ${simulationId}`);
+    } catch (error) {
+      console.error('Failed to load simulation:', error);
+    }
+  }, []);
+
+  // Function to delete a simulation
+  const deleteSimulation = useCallback(async (simulationId: string) => {
+    try {
+      await combatSimulationStorage.deleteSimulation(simulationId);
+
+      // If we're currently viewing the deleted simulation, clear the current ID
+      if (currentSimulationId === simulationId) {
+        setCurrentSimulationId(null);
+      }
+
+      // Refresh the saved simulations list
+      loadSavedSimulations();
+
+      console.log(`🗑️ Deleted simulation: ${simulationId}`);
+    } catch (error) {
+      console.error('Failed to delete simulation:', error);
+    }
+  }, [currentSimulationId, loadSavedSimulations]);
 
   // Function to fetch marketplace prices for all test levels
-  const fetchMarketplacePrices = useCallback(async (slotsToTest: EquipmentItem[]) => {
+  const fetchMarketplacePrices = useCallback(async (slotsToTest: { slot: string; itemName: string; enhancementLevel: number; isEmpty: boolean }[]) => {
     console.log('🛒 Fetching marketplace prices for test items...');
 
     for (const equipment of slotsToTest) {
-      const selectedLevel = selectedEnhancementLevels[equipment.slot];
-      if (selectedLevel === undefined || equipment.isEmpty) continue;
+      const targetLevel = displayEnhancementLevels[equipment.slot];
+      if (targetLevel === undefined || equipment.isEmpty) continue;
 
       // Calculate the range of levels that will be tested
       const testLevels = [];
-      for (let level = equipment.enhancementLevel + 1; level <= selectedLevel; level++) {
+      for (let level = equipment.enhancementLevel + 1; level <= targetLevel; level++) {
         testLevels.push(level);
       }
 
       console.log(`🔍 Fetching prices for ${equipment.itemName} levels: ${testLevels.join(', ')}`);
       console.log(`📦 Equipment Details:`, {
         slot: equipment.slot,
-        itemHrid: equipment.itemHrid,
         itemName: equipment.itemName,
         currentLevel: equipment.enhancementLevel,
         testLevels: testLevels
@@ -439,67 +569,117 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
         })
       );
     }
-  }, [selectedEnhancementLevels]);
+  }, [displayEnhancementLevels]);
 
   const handleFindUpgrades = async () => {
-    if (zoneData.length === 0) {
-      setError('Please run Zone Analysis first to establish baseline performance');
-      return;
-    }
-
+    // No need to check zoneData - the upgrade simulation handles baseline internally
     setIsAnalyzingUpgrades(true);
     setError(null);
-    setUpgradeResults([]);
+    setEquipmentTestResults({});
+    setAbilityTestResults({});
+    setHouseTestResults({});
+    setEquipmentRecommendations([]);
+    setAbilityRecommendations([]);
+    setHouseRecommendations([]);
+    setZoneData([]); // Reset zone data since we're doing a fresh analysis
 
     // Determine which slots need testing (where selected level differs from current level)
-    const slotsToTest = equipmentTestingData.filter(equipment => {
-      if (equipment.isEmpty) return false;
-      const selectedLevel = selectedEnhancementLevels[equipment.slot];
-      return selectedLevel !== undefined && selectedLevel !== equipment.enhancementLevel;
+    const slotsToTest = EQUIPMENT_SLOTS.filter(slot => {
+      // Map slots to match character equipment data
+      let lookupSlot = slot;
+      if (slot === 'weapon') {
+        lookupSlot = 'main_hand';
+      } else if (slot === 'off_hand') {
+        lookupSlot = 'off_hand';
+      }
+
+      // Format the slot name for lookup (convert to Title Case like the import does)
+      const formattedSlotName = lookupSlot.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const equipmentItem = character.equipment[formattedSlotName];
+
+      // Skip if no item equipped
+      if (!equipmentItem || !equipmentItem.item || equipmentItem.item === '') {
+        return false;
+      }
+
+      // Get the target level from input
+      const targetLevel = displayEnhancementLevels[slot];
+      const currentLevel = equipmentItem.enhancement;
+
+      console.log(`🔍 Debug - Equipment change detection for ${slot}:`, {
+        formattedSlotName,
+        item: equipmentItem.item,
+        currentLevel,
+        targetLevel,
+        hasChange: targetLevel !== undefined && targetLevel !== currentLevel
+      });
+
+      return targetLevel !== undefined && targetLevel !== currentLevel;
+    }).map(slot => {
+      // Convert slot info to the format expected by the rest of the function
+      let lookupSlot = slot;
+      if (slot === 'weapon') {
+        lookupSlot = 'main_hand';
+      } else if (slot === 'off_hand') {
+        lookupSlot = 'off_hand';
+      }
+
+      const formattedSlotName = lookupSlot.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const equipmentItem = character.equipment[formattedSlotName];
+
+      return {
+        slot,
+        itemName: equipmentItem.item,
+        enhancementLevel: equipmentItem.enhancement,
+        isEmpty: false
+      };
     });
 
-    if (slotsToTest.length === 0) {
-      setError('No enhancement level changes detected. Please select different enhancement levels to test.');
+    // Check for ability changes
+    const abilityChanges = character.abilities.filter(ability => {
+      const targetLevel = abilityTargetLevels[ability.abilityHrid];
+      return targetLevel !== undefined && targetLevel !== ability.level;
+    });
+
+    // Check for house changes
+    const houseChanges = Object.entries(character.houseRooms).filter(([roomHrid, currentLevel]) => {
+      const targetLevel = houseMaxLevels[roomHrid];
+      return targetLevel !== undefined && targetLevel !== currentLevel;
+    });
+
+    // Check if there are any changes to test
+    const hasChanges = slotsToTest.length > 0 || abilityChanges.length > 0 || houseChanges.length > 0;
+
+    if (!hasChanges) {
+      setError('No changes detected. Please modify enhancement levels, ability levels, or house levels to test.');
       setIsAnalyzingUpgrades(false);
       return;
     }
 
     try {
-      console.log(`🔧 Testing ${slotsToTest.length} equipment slots with changed enhancement levels...`);
+      console.log(`🔧 Testing changes:`, {
+        equipment: `${slotsToTest.length} slots`,
+        abilities: `${abilityChanges.length} abilities`,
+        houses: `${houseChanges.length} rooms`
+      });
 
       // Fetch marketplace prices for all test items first
       await fetchMarketplacePrices(slotsToTest);
 
-      // Determine target zone based on optimization preference
-      const targetZone = (() => {
-        if (optimizeFor === 'profit') {
-          const bestProfitZone = getBestZoneForProfit();
-          if (bestProfitZone) {
-            // Map zone name back to zone value
-            return Object.entries(ZONE_DISPLAY_NAMES).find(([value, name]) =>
-              name === bestProfitZone.zone_name
-            )?.[0];
-          }
-        } else {
-          const bestExpZone = getBestZoneForExp();
-          if (bestExpZone) {
-            // Map zone name back to zone value
-            return Object.entries(ZONE_DISPLAY_NAMES).find(([value, name]) =>
-              name === bestExpZone.zone_name
-            )?.[0];
-          }
-        }
-        // Fallback to first zone if mapping fails
-        return '/actions/combat/fly';
-      })();
+      // Use the selected zone and tier for optimization
+      const targetZone = selectedCombatZone;
+      const targetTier = selectedCombatTier;
 
-      console.log(`🎯 Target zone for optimization: ${targetZone} (${ZONE_DISPLAY_NAMES[targetZone || '/actions/combat/fly']})`);
+      console.log(`🎯 Target zone for optimization: ${targetZone} (${ZONE_DISPLAY_NAMES[targetZone]}) - Tier ${targetTier}`);
 
       // Create simplified request - we'll build the test plan on the backend
       const request = {
         optimizeFor,
-        targetZone: targetZone || '/actions/combat/fly',
-        selectedLevels: selectedEnhancementLevels
+        targetZone,
+        targetTier,
+        selectedLevels: displayEnhancementLevels,
+        abilityTargetLevels,
+        houseTargetLevels: houseMaxLevels
       };
 
       // Calculate total tests that will be run
@@ -537,6 +717,27 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
                   experienceGain: event.baselineResults.experienceGain,
                   profitPerDay: event.baselineResults.profitPerDay
                 });
+
+                // Also populate zone data for results display
+                const currentZoneName = ZONE_DISPLAY_NAMES[selectedCombatZone] || 'Unknown Zone';
+                setZoneData([{
+                  zone_name: currentZoneName,
+                  difficulty: selectedCombatTier,
+                  player: 'Current Character',
+                  encounters: '0',
+                  deaths_per_hour: '0',
+                  total_experience: event.baselineResults.experienceGain.toString(),
+                  stamina: '0',
+                  intelligence: '0',
+                  attack: '0',
+                  magic: '0',
+                  ranged: '0',
+                  melee: '0',
+                  defense: '0',
+                  no_rng_revenue: '0',
+                  expense: '0',
+                  no_rng_profit: event.baselineResults.profitPerDay.toString()
+                }]);
               }
               break;
 
@@ -605,57 +806,102 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
               console.log('🔧 Upgrade analysis complete!');
               console.log('Recommendations:', event.recommendations);
               console.log('Upgrade tests:', event.upgradeTests);
+              console.log('Ability tests:', event.abilityTests);
+              console.log('House tests:', event.houseTests);
+              console.log('Ability recommendations:', event.abilityRecommendations);
+              console.log('House recommendations:', event.houseRecommendations);
 
-              // Convert recommendations to UpgradeAnalysisResult format
-              const results = event.recommendations?.map((rec: {
-                slot: string;
-                currentEnhancement: number;
-                recommendedEnhancement: number;
-                profitIncrease: number;
-                experienceIncrease: number;
-                percentageIncrease: number;
-                enhancementCost?: number;
-                paybackDays?: number;
-              }) => {
-                console.log(`Processing recommendation for ${rec.slot}:`, rec);
-
-                const slotTests = event.upgradeTests?.filter((test: {
+              // Process equipment test results
+              if (event.equipmentTests) {
+                const equipmentTestData: { [slot: string]: { level: number; profit: number; exp: number; enhancementCost?: number; paybackDays?: number; itemName?: string; itemHrid?: string }[] } = {};
+                event.equipmentTests.forEach((test: {
                   slot: string;
-                  testEnhancement: number;
+                  currentLevel: number;
+                  testLevel: number;
                   profitPerDay: number;
                   experienceGain: number;
-                }) => test.slot === rec.slot) || [];
-                const allTestResults = slotTests.map((test: {
-                  testEnhancement: number;
+                  enhancementCost?: number;
+                  paybackDays?: number;
+                  itemName?: string;
+                  itemHrid?: string;
+                }) => {
+                  if (!equipmentTestData[test.slot]) {
+                    equipmentTestData[test.slot] = [];
+                  }
+                  equipmentTestData[test.slot].push({
+                    level: test.testLevel,
+                    profit: test.profitPerDay,
+                    exp: test.experienceGain,
+                    enhancementCost: test.enhancementCost,
+                    paybackDays: test.paybackDays,
+                    itemName: test.itemName,
+                    itemHrid: test.itemHrid
+                  });
+                });
+                setEquipmentTestResults(equipmentTestData);
+              }
+
+              // Process ability test results
+              if (event.abilityTests) {
+                const abilityTestData: { [abilityHrid: string]: { level: number; profit: number; exp: number }[] } = {};
+                event.abilityTests.forEach((test: {
+                  abilityHrid: string;
+                  abilityName: string;
+                  currentLevel: number;
+                  testLevel: number;
                   profitPerDay: number;
                   experienceGain: number;
-                }) => ({
-                  enhancement: test.testEnhancement,
-                  profit: test.profitPerDay,
-                  exp: test.experienceGain
-                }));
+                }) => {
+                  if (!abilityTestData[test.abilityHrid]) {
+                    abilityTestData[test.abilityHrid] = [];
+                  }
+                  abilityTestData[test.abilityHrid].push({
+                    level: test.testLevel,
+                    profit: test.profitPerDay,
+                    exp: test.experienceGain
+                  });
+                });
+                setAbilityTestResults(abilityTestData);
+              }
 
-                const result = {
-                  slot: rec.slot,
-                  currentEnhancement: rec.currentEnhancement,
-                  recommendedEnhancement: rec.recommendedEnhancement,
-                  improvement: {
-                    profitIncrease: rec.profitIncrease,
-                    expIncrease: rec.experienceIncrease,
-                    percentageIncrease: rec.percentageIncrease
-                  },
-                  allTestResults,
-                  enhancementCost: rec.enhancementCost,
-                  paybackDays: rec.paybackDays
-                };
+              // Process house test results
+              if (event.houseTests) {
+                const houseTestData: { [roomHrid: string]: { level: number; profit: number; exp: number }[] } = {};
+                event.houseTests.forEach((test: {
+                  roomHrid: string;
+                  roomName: string;
+                  currentLevel: number;
+                  testLevel: number;
+                  profitPerDay: number;
+                  experienceGain: number;
+                }) => {
+                  if (!houseTestData[test.roomHrid]) {
+                    houseTestData[test.roomHrid] = [];
+                  }
+                  houseTestData[test.roomHrid].push({
+                    level: test.testLevel,
+                    profit: test.profitPerDay,
+                    exp: test.experienceGain
+                  });
+                });
+                setHouseTestResults(houseTestData);
+              }
 
-                console.log(`Created result for ${rec.slot}:`, result);
-                return result;
-              }) || [];
+              // Store equipment, ability and house recommendations
+              if (event.recommendations) {
+                setEquipmentRecommendations(event.recommendations);
+              }
+              if (event.abilityRecommendations) {
+                setAbilityRecommendations(event.abilityRecommendations);
+              }
+              if (event.houseRecommendations) {
+                setHouseRecommendations(event.houseRecommendations);
+              }
 
-              console.log('Final results array:', results);
-              setUpgradeResults(results);
-              console.log('upgradeResults state updated');
+              console.log('Simulation complete');
+
+              // Save simulation results to IndexedDB
+              saveSimulationResults(selectedCombatZone, selectedCombatTier, optimizeFor);
               break;
 
             case 'error':
@@ -722,8 +968,6 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
     return 'text-gray-400';
   };
 
-  const bestProfitZone = getBestZoneForProfit();
-  const bestExpZone = getBestZoneForExp();
 
   return (
     <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
@@ -844,9 +1088,15 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
                           <input
                             type="number"
                             min="0"
-                            max="100"
-                            value={ability.level}
-                            readOnly
+                            max="200"
+                            value={abilityTargetLevels[ability.abilityHrid] || ability.level}
+                            onChange={(e) => {
+                              const newLevel = Math.min(200, Math.max(0, parseInt(e.target.value) || 0));
+                              setAbilityTargetLevels(prev => ({
+                                ...prev,
+                                [ability.abilityHrid]: newLevel
+                              }));
+                            }}
                             className="w-16 px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs text-center focus:border-blue-400 focus:outline-none"
                           />
                         </div>
@@ -905,7 +1155,7 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
                       {equipmentItem && equipmentItem.item !== '' ? (
                         <div>
                           <p className="text-purple-200 text-xs">
-                            {equipmentItem.item}
+                            {equipmentItem.item} (+{equipmentItem.enhancement})
                           </p>
                           <button
                             onClick={() => addSimSlot(slot)}
@@ -929,7 +1179,7 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
                           type="number"
                           min="0"
                           max="20"
-                          value={displayEnhancementLevels[slot] || 0}
+                          value={displayEnhancementLevels[slot] !== undefined ? displayEnhancementLevels[slot] : (equipmentItem.enhancement || 0)}
                           onChange={(e) => {
                             const newLevel = Math.min(20, Math.max(0, parseInt(e.target.value) || 0));
                             setDisplayEnhancementLevels(prev => ({
@@ -1037,20 +1287,6 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
           )}
         </div>
 
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-purple-200">Combat Zone Analysis</h3>
-        <button
-          onClick={runCombatAnalysis}
-          disabled={isAnalyzing}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            isAnalyzing
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : 'bg-purple-600 text-white hover:bg-purple-700'
-          }`}
-        >
-          {isAnalyzing ? 'Analyzing Zones...' : 'Run Zone Analysis'}
-        </button>
-      </div>
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
@@ -1062,10 +1298,10 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
         <div className="bg-black/20 rounded-lg p-6 mb-4">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-300">
-              {isInitializing ? 'Initializing combat simulator...' : 'Analyzing all combat zones...'}
+              {isInitializing ? 'Initializing combat simulator...' : `Analyzing ${ZONE_DISPLAY_NAMES[selectedCombatZone]} (Tier ${selectedCombatTier})...`}
             </span>
             <span className="text-purple-300">
-              🎯 ZONE ANALYSIS
+              🎯 TARGETED ANALYSIS
             </span>
           </div>
 
@@ -1079,102 +1315,171 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
           <p className="text-gray-400 text-sm">
             {isInitializing
               ? 'Loading external combat simulator...'
-              : 'Testing all zones with your current equipment...'
+              : `Testing ${ZONE_DISPLAY_NAMES[selectedCombatZone]} with your current equipment...`
             }
           </p>
         </div>
       )}
 
+      {/* Saved Simulations Section */}
+      {savedSimulations.length > 0 && (
+        <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-6 mb-6">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            📊 Recent Combat Simulations ({savedSimulations.length})
+          </h3>
+          <div className="grid gap-3 max-h-60 overflow-y-auto">
+            {savedSimulations.slice(0, 10).map((simulation) => (
+              <div
+                key={simulation.id}
+                className={`bg-gray-700/50 border rounded-lg p-3 cursor-pointer transition-colors hover:bg-gray-600/50 ${
+                  currentSimulationId === simulation.id ? 'border-blue-500 bg-blue-900/30' : 'border-gray-600'
+                }`}
+                onClick={() => loadSimulation(simulation.id)}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
+                  <div>
+                    <div className="text-blue-300 font-medium">{simulation.characterName}</div>
+                    <div className="text-gray-400 text-xs">
+                      {new Date(simulation.timestamp).toLocaleDateString()} {new Date(simulation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-green-300">{ZONE_DISPLAY_NAMES[simulation.targetZone] || simulation.targetZone}</div>
+                    <div className="text-gray-400 text-xs">Tier {simulation.targetTier} • {simulation.optimizeFor}</div>
+                  </div>
+                  <div>
+                    <div className="text-yellow-300">{simulation.baselineResults.profitPerDay.toLocaleString()}/day</div>
+                    <div className="text-gray-400 text-xs">{simulation.summary.totalTests} tests run</div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSimulation(simulation.id);
+                      }}
+                      className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-900/30"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {savedSimulations.length > 10 && (
+            <div className="text-gray-400 text-xs text-center mt-2">
+              Showing 10 of {savedSimulations.length} simulations
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Find My Best Upgrades - Unified Analysis */}
+      {!showEquipmentTesting && (
+      <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6 mb-6">
+        <h4 className="text-lg font-bold text-yellow-200 mb-4">🔧 Find My Best Upgrades</h4>
+        <p className="text-yellow-100 text-sm mb-4">
+          Analyze your current gear to find optimal enhancement levels for maximum {optimizeFor === 'profit' ? 'profit' : 'experience'}.
+          This includes baseline testing and upgrade analysis for the selected zone and tier.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+          {/* Combat Zone Selection */}
+          <div>
+            <label className="block text-yellow-200 text-sm font-medium mb-2">
+              Target Combat Zone:
+            </label>
+            <select
+              value={selectedCombatZone}
+              onChange={(e) => setSelectedCombatZone(e.target.value)}
+              className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+            >
+              {COMBAT_ZONES.map((zone) => (
+                <option key={zone.value} value={zone.value}>
+                  {zone.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Combat Tier Selection */}
+          <div>
+            <label className="block text-yellow-200 text-sm font-medium mb-2">
+              Target Combat Tier:
+            </label>
+            <select
+              value={selectedCombatTier}
+              onChange={(e) => setSelectedCombatTier(e.target.value)}
+              className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+            >
+              {COMBAT_TIERS.map((tier) => (
+                <option key={tier.value} value={tier.value}>
+                  {tier.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Optimization Target */}
+          <div>
+            <label className="block text-yellow-200 text-sm font-medium mb-2">
+              Optimize For:
+            </label>
+            <select
+              value={optimizeFor}
+              onChange={(e) => setOptimizeFor(e.target.value as 'profit' | 'exp')}
+              className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+            >
+              <option value="profit">Profit (Coins/Day)</option>
+              <option value="exp">Experience (EXP/Hour)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={handleFindUpgrades}
+            disabled={isAnalyzingUpgrades}
+            className={`px-8 py-3 font-medium rounded-lg transition-all ${
+              isAnalyzingUpgrades
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-yellow-600 text-white hover:bg-yellow-700'
+            }`}
+          >
+            {isAnalyzingUpgrades ? 'Analyzing Upgrades...' : 'Find My Best Upgrades'}
+          </button>
+        </div>
+
+        <div className="mt-3 p-3 bg-yellow-600/20 border border-yellow-500/30 rounded-lg">
+          <p className="text-yellow-200 text-sm text-center">
+            📍 Will analyze: <strong>{ZONE_DISPLAY_NAMES[selectedCombatZone]} (Tier {selectedCombatTier})</strong> with your current gear configuration
+          </p>
+        </div>
+      </div>
+      )}
+
       {zoneData.length > 0 && (
         <div className="space-y-6">
-          {/* Best Zone Results */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Best Profit Zone */}
-            {bestProfitZone && (
-              <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-green-200 mb-2">🪙 Best for Profit</h4>
-                <p className="text-white">
-                  Your best place for farming <strong>Profit</strong> is{' '}
-                  <span className="text-green-300 font-semibold">{bestProfitZone.zone_name}</span>{' '}
-                  (Difficulty {bestProfitZone.difficulty})
-                </p>
-                <p className="text-green-100 text-sm mt-1">
-                  Earning <strong>{parseFloat(bestProfitZone.no_rng_profit.replace(/,/g, '')).toLocaleString()} coins/day</strong>
-                </p>
-              </div>
-            )}
-
-            {/* Best EXP Zone */}
-            {bestExpZone && (
-              <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
-                <h4 className="text-lg font-bold text-blue-200 mb-2">⭐ Best for Experience</h4>
-                <p className="text-white">
-                  Your best place for farming <strong>EXP</strong> is{' '}
-                  <span className="text-blue-300 font-semibold">{bestExpZone.zone_name}</span>{' '}
-                  (Difficulty {bestExpZone.difficulty})
-                </p>
-                <p className="text-blue-100 text-sm mt-1">
-                  Earning <strong>{parseFloat(bestExpZone.total_experience).toLocaleString()} EXP/hour</strong>
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Upgrade Analysis Form */}
-          {!showEquipmentTesting && (
-          <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6">
-            <h4 className="text-lg font-bold text-yellow-200 mb-4">🔧 Find Equipment Upgrades</h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-              {/* Optimization Target */}
-              <div>
-                <label className="block text-yellow-200 text-sm font-medium mb-2">
-                  Optimize For:
-                </label>
-                <select
-                  value={optimizeFor}
-                  onChange={(e) => setOptimizeFor(e.target.value as 'profit' | 'exp')}
-                  className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
-                >
-                  <option value="profit">Profit (Coins/Day)</option>
-                  <option value="exp">Experience (EXP/Hour)</option>
-                </select>
-              </div>
-
-              {/* Enhancement Tiers */}
-              <div>
-                <label className="block text-yellow-200 text-sm font-medium mb-2">
-                  Max Enhancement Tiers:
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={maxEnhancementTiers}
-                  onChange={(e) => setMaxEnhancementTiers(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="w-full p-2 bg-black/30 border border-yellow-500/50 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
-                />
-                <p className="text-yellow-300 text-xs mt-1">How many enhancement levels to consider (1-20)</p>
-              </div>
-
-              {/* Find Upgrades Button */}
-              <div>
-                <label className="block text-yellow-200 text-sm font-medium mb-2">&nbsp;</label>
-                <button
-                  onClick={handleFindUpgrades}
-                  disabled={isAnalyzingUpgrades || zoneData.length === 0}
-                  className={`w-full px-4 py-2 font-medium rounded-lg transition-all ${
-                    isAnalyzingUpgrades || zoneData.length === 0
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                  }`}
-                >
-                  {isAnalyzingUpgrades ? 'Analyzing Upgrades...' : 'Find My Best Upgrades'}
-                </button>
+          {/* Baseline Results */}
+          {baselineResults && (
+            <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
+              <h4 className="text-lg font-bold text-gray-200 mb-2">📊 Baseline Results</h4>
+              <p className="text-white mb-2">
+                Current performance in <strong>{ZONE_DISPLAY_NAMES[selectedCombatZone]} (Tier {selectedCombatTier})</strong>:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-blue-600/20 p-3 rounded">
+                  <div className="text-blue-300 text-sm font-medium">Experience Gain</div>
+                  <div className="text-white text-lg font-bold">{baselineResults.experienceGain.toLocaleString()}/hr</div>
+                </div>
+                <div className="bg-yellow-600/20 p-3 rounded">
+                  <div className="text-yellow-300 text-sm font-medium">Profit</div>
+                  <div className="text-white text-lg font-bold">{baselineResults.profitPerDay.toLocaleString()}/day</div>
+                </div>
               </div>
             </div>
-          </div>
           )}
+
 
           {/* Equipment Configuration */}
           {showEquipmentTesting && (
@@ -1467,95 +1772,294 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
             </div>
           )}
 
-          {/* Upgrade Results */}
-          {upgradeResults.length > 0 && (
-            <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">
-              <h4 className="text-lg font-bold text-green-200 mb-4">
-                🎯 Equipment Upgrade Recommendations
-              </h4>
-              <p className="text-green-100 text-sm mb-4">
-                Optimizing for <strong>{optimizeFor === 'profit' ? 'Coins/Day' : 'Experience/Hour'}</strong>
-              </p>
+          {/* Unified Upgrade Results */}
+          {(Object.keys(equipmentTestResults).length > 0 || Object.keys(abilityTestResults).length > 0 || Object.keys(houseTestResults).length > 0) && (
+            <div className="space-y-4">
+                {(() => {
+                  // Combine all upgrade types into a single array
+                  const allUpgrades: Array<{
+                    type: 'equipment' | 'ability' | 'house';
+                    key: string;
+                    recommendation: Record<string, unknown>;
+                    testResults?: unknown;
+                    percentageIncrease: number;
+                  }> = [];
 
-              <div className="space-y-3">
-                {upgradeResults.map((result, index) => (
-                  <div
-                    key={result.slot}
-                    className="bg-black/20 rounded-lg p-4 border border-green-500/30"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h5 className="text-white font-medium capitalize">
-                          {result.slot.replace('_', ' ')} Slot
-                        </h5>
-                        <p className="text-green-200 text-sm">
-                          Current: +{result.currentEnhancement} → Recommended: +{result.recommendedEnhancement}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-300 font-bold">
-                          +{result.improvement.percentageIncrease.toFixed(1)}%
-                        </div>
-                        <div className="text-green-200 text-sm">
-                          {optimizeFor === 'profit'
-                            ? `+${result.improvement.profitIncrease.toLocaleString()} coins/day`
-                            : `+${result.improvement.expIncrease.toLocaleString()} exp/hr`
-                          }
-                        </div>
-                        {optimizeFor === 'profit' && result.enhancementCost && (
-                          <div className="text-yellow-300 text-xs mt-1">
-                            <div>Cost: {result.enhancementCost.toLocaleString()}c</div>
-                            {result.paybackDays && (
-                              <div>Payback: {result.paybackDays} days</div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  // Add equipment upgrades
+                  Object.entries(equipmentTestResults).forEach(([slot, testResults]) => {
+                    const recommendation = equipmentRecommendations.find((rec: Record<string, unknown>) => rec.slot === slot);
+                    if (recommendation) {
+                      allUpgrades.push({
+                        type: 'equipment',
+                        key: slot,
+                        recommendation,
+                        testResults,
+                        percentageIncrease: (recommendation.percentageIncrease as number) || 0
+                      });
+                    }
+                  });
 
-                    {/* Show all test results */}
-                    <details className="mt-2">
-                      <summary className="text-green-300 text-sm cursor-pointer hover:text-green-200">
-                        View all enhancement levels tested ({result.allTestResults.length} levels)
-                      </summary>
-                      <div className="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                        {result.allTestResults.map((test) => (
-                          <div
-                            key={test.enhancement}
-                            className={`p-2 rounded text-xs text-center ${
-                              test.enhancement === result.recommendedEnhancement
-                                ? 'bg-green-600 text-white font-bold'
-                                : 'bg-gray-700 text-gray-300'
-                            }`}
-                          >
-                            <div>+{test.enhancement}</div>
-                            <div>
-                              {optimizeFor === 'profit'
-                                ? test.profit.toLocaleString()
-                                : test.exp.toLocaleString()
-                              }
+                  // Add ability upgrades
+                  Object.entries(abilityTestResults).forEach(([abilityHrid, testResults]) => {
+                    const recommendation = abilityRecommendations.find((rec: Record<string, unknown>) => rec.abilityHrid === abilityHrid);
+                    if (recommendation) {
+                      allUpgrades.push({
+                        type: 'ability',
+                        key: abilityHrid,
+                        recommendation,
+                        testResults,
+                        percentageIncrease: (recommendation.percentageIncrease as number) || 0
+                      });
+                    }
+                  });
+
+                  // Add house upgrades
+                  Object.entries(houseTestResults).forEach(([roomHrid, testResults]) => {
+                    const recommendation = houseRecommendations.find((rec: Record<string, unknown>) => rec.roomHrid === roomHrid);
+                    if (recommendation) {
+                      allUpgrades.push({
+                        type: 'house',
+                        key: roomHrid,
+                        recommendation,
+                        testResults,
+                        percentageIncrease: (recommendation.percentageIncrease as number) || 0
+                      });
+                    }
+                  });
+
+                  // Sort by highest percentage increase (descending)
+                  allUpgrades.sort((a, b) => b.percentageIncrease - a.percentageIncrease);
+
+                  return allUpgrades.map((upgrade, index) => {
+                    if (upgrade.type === 'equipment') {
+                      const slotName = upgrade.key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      const recommendation = upgrade.recommendation;
+                      const testResults = (upgrade.testResults as unknown[])?.[0] as Record<string, unknown> || {};
+
+                      const rawItemName = recommendation?.itemName as string || testResults.itemName || `${slotName} Item`;
+                      const itemName = rawItemName && typeof rawItemName === 'string' ? rawItemName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : `${slotName} Item`;
+                      const itemHrid = recommendation?.itemHrid as string || testResults.itemHrid;
+
+                      return (
+                        <div key={`equipment-${upgrade.key}`} className="bg-black/20 rounded-lg p-4 border border-orange-500/30">
+                          <div className="grid grid-cols-3 gap-4 items-start">
+                            {/* Column 1: Equipment Name and Levels */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8">
+                                {itemHrid && typeof itemHrid === 'string' ? (
+                                  <ItemIcon
+                                    itemHrid={itemHrid}
+                                    size={32}
+                                    className="rounded border border-orange-400/50"
+                                  />
+                                ) : (
+                                  <SkillIcon
+                                    skillId="combat"
+                                    size={32}
+                                    className="rounded border border-orange-400/50"
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <h5 className="text-white font-medium">{itemName}</h5>
+                                <p className="text-orange-200 text-sm">{slotName} Equipment</p>
+                                <div className="text-orange-200 text-sm mt-1">
+                                  <div>Current: +{recommendation.currentLevel as number}</div>
+                                  <div className="text-orange-300 font-medium">Best: +{recommendation.recommendedLevel as number}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Column 2: Cost Information */}
+                            <div className="text-center">
+                              {recommendation.enhancementCost !== undefined && recommendation.enhancementCost !== null && (recommendation.enhancementCost as number) > 0 ? (
+                                <div className="text-yellow-300 text-sm">
+                                  <div className="font-medium mb-1">Total Cost: {(recommendation.enhancementCost as number).toLocaleString()}c</div>
+                                  <div className="text-xs mb-1">Enhancement materials from AH</div>
+                                  {recommendation.paybackDays !== undefined && (
+                                    <div className="text-orange-300 text-xs">
+                                      Payback: {(recommendation.paybackDays as number) === 0 ? 'Immediate' : `${recommendation.paybackDays} days`}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-gray-400 text-sm">No cost</div>
+                              )}
+                            </div>
+
+                            {/* Column 3: Benefits and Total */}
+                            <div className="text-right">
+                              <div className="text-orange-300 font-bold mb-1">
+                                +{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                              </div>
+                              <div className="text-orange-200 text-sm mb-1">
+                                Increase: {optimizeFor === 'profit'
+                                  ? `+${((recommendation.profitIncrease as number) || 0).toLocaleString()} coins/day`
+                                  : `+${((recommendation.experienceIncrease as number) || 0).toLocaleString()} exp/hr`
+                                }
+                              </div>
+                              {baselineResults && (
+                                <div className="text-yellow-300 text-sm font-medium">
+                                  Total: {optimizeFor === 'profit'
+                                    ? `${(baselineResults.profitPerDay + ((recommendation.profitIncrease as number) || 0)).toLocaleString()}/day`
+                                    : `${(baselineResults.experienceGain + ((recommendation.experienceIncrease as number) || 0)).toLocaleString()}/hr`
+                                  }
+                                </div>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </details>
-                  </div>
-                ))}
-              </div>
+                        </div>
+                      );
+                    } else if (upgrade.type === 'ability') {
+                      const abilityName = upgrade.key.replace('/abilities/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      const currentAbility = character.abilities.find(a => a.abilityHrid === upgrade.key);
+                      const currentLevel = currentAbility?.level || 0;
+                      const recommendation = upgrade.recommendation;
 
-              <div className="mt-4 p-3 bg-green-600/20 rounded-lg">
-                <p className="text-green-200 text-sm">
-                  💡 <strong>Summary:</strong> Found {upgradeResults.length} equipment upgrades that would improve your {optimizeFor} performance.
-                  Total potential improvement: <strong>
-                    {optimizeFor === 'profit'
-                      ? `+${upgradeResults.reduce((sum, r) => sum + r.improvement.profitIncrease, 0).toLocaleString()} coins/day`
-                      : `+${upgradeResults.reduce((sum, r) => sum + r.improvement.expIncrease, 0).toLocaleString()} exp/hour`
+                      return (
+                        <div key={`ability-${upgrade.key}`} className="bg-black/20 rounded-lg p-4 border border-blue-500/30">
+                          <div className="grid grid-cols-3 gap-4 items-start">
+                            {/* Column 1: Ability Name and Levels */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8">
+                                <AbilityIcon
+                                  abilityId={upgrade.key.replace('/abilities/', '')}
+                                  size={32}
+                                  className="rounded border border-blue-400/50"
+                                />
+                              </div>
+                              <div>
+                                <h5 className="text-white font-medium">{abilityName}</h5>
+                                <p className="text-blue-200 text-sm">Ability</p>
+                                <p className="text-blue-200 text-sm">
+                                  Current Level: {currentLevel} → Target: {recommendation.recommendedLevel as number}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Column 2: Cost Information */}
+                            <div className="text-center">
+                              {recommendation.enhancementCost !== undefined && recommendation.enhancementCost !== null && (recommendation.enhancementCost as number) > 0 ? (
+                                <div className="text-yellow-300 text-sm">
+                                  <div className="font-medium mb-1">Total Cost: {(recommendation.enhancementCost as number).toLocaleString()}c</div>
+                                  <div className="text-xs mb-1">
+                                    {(() => {
+                                      if (recommendation.booksRequired && recommendation.costPerBook) {
+                                        return `${(recommendation.costPerBook as number).toLocaleString()}c per book (${recommendation.booksRequired} books)`;
+                                      } else {
+                                        const levelDiff = (recommendation.recommendedLevel as number) - currentLevel;
+                                        const estimatedBooks = Math.ceil(levelDiff * 2.5);
+                                        const costPerBook = Math.round((recommendation.enhancementCost as number) / estimatedBooks);
+                                        return `~${costPerBook.toLocaleString()}c per book (~${estimatedBooks} books)`;
+                                      }
+                                    })()}
+                                  </div>
+                                  {recommendation.paybackDays !== undefined && (
+                                    <div className="text-orange-300 text-xs">
+                                      Payback: {(recommendation.paybackDays as number) === 0 ? 'Immediate' : `${recommendation.paybackDays} days`}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-gray-400 text-sm">No cost</div>
+                              )}
+                            </div>
+
+                            {/* Column 3: Benefits and Total */}
+                            <div className="text-right">
+                              <div className="text-blue-300 font-bold mb-1">
+                                +{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                              </div>
+                              <div className="text-blue-200 text-sm mb-1">
+                                Increase: {optimizeFor === 'profit'
+                                  ? `+${((recommendation.profitIncrease as number) || 0).toLocaleString()} coins/day`
+                                  : `+${((recommendation.experienceIncrease as number) || 0).toLocaleString()} exp/hr`
+                                }
+                              </div>
+                              {baselineResults && (
+                                <div className="text-yellow-300 text-sm font-medium">
+                                  Total: {optimizeFor === 'profit'
+                                    ? `${(baselineResults.profitPerDay + ((recommendation.profitIncrease as number) || 0)).toLocaleString()}/day`
+                                    : `${(baselineResults.experienceGain + ((recommendation.experienceIncrease as number) || 0)).toLocaleString()}/hr`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    } else { // house
+                      const roomName = parseHouseName(upgrade.key);
+                      const currentLevel = character.houseRooms[upgrade.key] || 0;
+                      const recommendation = upgrade.recommendation;
+
+                      return (
+                        <div key={`house-${upgrade.key}`} className="bg-black/20 rounded-lg p-4 border border-green-500/30">
+                          <div className="grid grid-cols-3 gap-4 items-start">
+                            {/* Column 1: House Name and Levels */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8">
+                                <SkillIcon
+                                  skillId="house"
+                                  size={32}
+                                  className="rounded border border-green-400/50"
+                                />
+                              </div>
+                              <div>
+                                <h5 className="text-white font-medium">{roomName}</h5>
+                                <p className="text-green-200 text-sm">House Room</p>
+                                <p className="text-green-200 text-sm">
+                                  Current Level: {currentLevel} → Target: {recommendation.recommendedLevel as number}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Column 2: Cost Information */}
+                            <div className="text-center">
+                              {recommendation.enhancementCost !== undefined && recommendation.enhancementCost !== null && (recommendation.enhancementCost as number) > 0 ? (
+                                <div className="text-yellow-300 text-sm">
+                                  <div className="font-medium mb-1">Total Cost: {(recommendation.enhancementCost as number).toLocaleString()}c</div>
+                                  <div className="text-xs mb-1">Construction materials</div>
+                                  {recommendation.paybackDays !== undefined && (
+                                    <div className="text-orange-300 text-xs">
+                                      Payback: {(recommendation.paybackDays as number) === 0 ? 'Immediate' : `${recommendation.paybackDays} days`}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-gray-400 text-sm">No cost</div>
+                              )}
+                            </div>
+
+                            {/* Column 3: Benefits and Total */}
+                            <div className="text-right">
+                              <div className="text-green-300 font-bold mb-1">
+                                +{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                              </div>
+                              <div className="text-green-200 text-sm mb-1">
+                                Increase: {optimizeFor === 'profit'
+                                  ? `+${((recommendation.profitIncrease as number) || 0).toLocaleString()} coins/day`
+                                  : `+${((recommendation.experienceIncrease as number) || 0).toLocaleString()} exp/hr`
+                                }
+                              </div>
+                              {baselineResults && (
+                                <div className="text-yellow-300 text-sm font-medium">
+                                  Total: {optimizeFor === 'profit'
+                                    ? `${(baselineResults.profitPerDay + ((recommendation.profitIncrease as number) || 0)).toLocaleString()}/day`
+                                    : `${(baselineResults.experienceGain + ((recommendation.experienceIncrease as number) || 0)).toLocaleString()}/hr`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
                     }
-                  </strong>
-                </p>
-              </div>
+                  });
+                })()}
             </div>
           )}
+
 
           {/* Zone Data Summary */}
           <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
@@ -1563,15 +2067,24 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
               <div>
                 <h4 className="text-lg font-bold text-gray-200 mb-2">📊 Analysis Summary</h4>
                 <p className="text-gray-300 text-sm">
-                  Analyzed <strong>{zoneData.length} zones</strong> with your current equipment configuration.
+                  Analyzed <strong>{ZONE_DISPLAY_NAMES[selectedCombatZone]} (Tier {selectedCombatTier})</strong> with your current equipment configuration.
+                  {baselineResults && (
+                    <>
+                      <br/>
+                      <span className="text-green-300">Baseline Results: </span>
+                      {baselineResults.experienceGain.toLocaleString()} EXP/hr, {baselineResults.profitPerDay.toLocaleString()} coins/day
+                    </>
+                  )}
                 </p>
               </div>
-              <button
-                onClick={() => setShowZoneTable(true)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all"
-              >
-                View Full Data
-              </button>
+              {zoneData.length > 0 && (
+                <button
+                  onClick={() => setShowZoneTable(true)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all"
+                >
+                  View Details
+                </button>
+              )}
             </div>
           </div>
 
@@ -1631,7 +2144,8 @@ export function CombatUpgradeAnalysisIframe({ character, upgrades, rawCharacterD
 
       <div className="mt-4 text-xs text-gray-400">
         <p>💡 This uses server-side browser automation (Puppeteer) for accurate combat simulation</p>
-        <p>Analysis includes all difficulty levels for each combat zone</p>
+        <p>🎯 Unified analysis: Zone baseline + equipment upgrade testing in one streamlined workflow</p>
+        <p>⚡ Supports gear, abilities, and house testing with real-time progress updates</p>
       </div>
     </div>
   );

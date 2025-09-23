@@ -336,7 +336,6 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
         <div className="w-full">
           <CombatUpgradeAnalysisIframe
             character={character}
-            upgrades={upgrades}
             rawCharacterData={rawCharacterData}
             combatItems={combatItems}
           />

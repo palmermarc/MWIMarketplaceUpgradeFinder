@@ -510,18 +510,6 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
             </div>
           </div>
 
-      {/* Cost Summary Section - Placeholder */}
-      <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
-        <h4 className="text-md font-bold text-yellow-200 mb-3">📊 Cost Summary</h4>
-        <p className="text-yellow-100 text-sm">
-          Cost calculations will be implemented based on the target levels set above.
-        </p>
-        <div className="mt-3 space-y-1 text-sm text-yellow-200">
-          <p>• House upgrades: Will calculate material costs</p>
-          <p>• Ability upgrades: Will calculate book requirements</p>
-          <p>• Total investment: Will sum all costs</p>
-        </div>
-      </div>
     </div>
   );
 }
