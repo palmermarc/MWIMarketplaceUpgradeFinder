@@ -7,6 +7,7 @@ import { MarketplaceService } from '@/services/marketplace';
 import { COMBAT_ITEMS } from '@/constants/combatItems';
 import { useCharacterStorage, useMarketplaceStorage, useCombatItemsStorage } from '@/hooks/useBrowserStorage';
 import { useMarketplaceAutoLoader } from '@/hooks/useMarketplaceAutoLoader';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface CharacterImportProps {
   onCharacterImported: (character: CharacterStats, rawData?: string) => void;
@@ -15,6 +16,7 @@ interface CharacterImportProps {
 }
 
 export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCombatItemsLoaded }: CharacterImportProps) {
+  const { theme } = useTheme();
   const [jsonInput, setJsonInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,13 +210,13 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
      
       <div className="space-y-6">
         <div>
-          <label className="block text-white text-center mb-2">
+          <label className={`block ${theme.textColor} text-center mb-2`}>
             Paste your character JSON export:
           </label>
           <textarea
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
-            className="w-full h-64 p-4 bg-black/20 border border-white/20 rounded-lg text-white placeholder-gray-400 font-mono text-sm resize-none"
+            className={`w-full h-64 p-4 ${theme.inputBackground} border ${theme.inputBorder} rounded-lg ${theme.textColor} placeholder-gray-400 font-mono text-sm resize-none`}
             placeholder='{"player":{"defenseLevel":109,"magicLevel":21,...}}'
           />
         </div>

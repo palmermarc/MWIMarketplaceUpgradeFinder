@@ -2061,32 +2061,6 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
           )}
 
 
-          {/* Zone Data Summary */}
-          <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-lg font-bold text-gray-200 mb-2">📊 Analysis Summary</h4>
-                <p className="text-gray-300 text-sm">
-                  Analyzed <strong>{ZONE_DISPLAY_NAMES[selectedCombatZone]} (Tier {selectedCombatTier})</strong> with your current equipment configuration.
-                  {baselineResults && (
-                    <>
-                      <br/>
-                      <span className="text-green-300">Baseline Results: </span>
-                      {baselineResults.experienceGain.toLocaleString()} EXP/hr, {baselineResults.profitPerDay.toLocaleString()} coins/day
-                    </>
-                  )}
-                </p>
-              </div>
-              {zoneData.length > 0 && (
-                <button
-                  onClick={() => setShowZoneTable(true)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all"
-                >
-                  View Details
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* Zone Data Table Modal */}
           {showZoneTable && (

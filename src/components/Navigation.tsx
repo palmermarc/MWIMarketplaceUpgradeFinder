@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Logo } from './Logo';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export type NavigationTab = 'import-character' | 'find-upgrades' | 'calculate-costs' | 'quick-upgrades' | 'marketplace-analysis';
 
@@ -11,6 +11,8 @@ interface NavigationProps {
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
+  const { theme } = useTheme();
+
   const tabs = [
     { id: 'import-character' as NavigationTab, label: 'Import Character' },
     { id: 'find-upgrades' as NavigationTab, label: 'Find Upgrades' },
@@ -20,7 +22,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   ];
 
   return (
-    <header className="bg-gradient-to-r from-blue-800 via-purple-800 to-indigo-800 border-b border-white/20 shadow-lg">
+    <header className={`${theme.mode === 'classic' ? 'bg-gradient-to-r from-blue-800 via-purple-800 to-indigo-800 border-b border-white/20' : `${theme.cardBackground} border-b ${theme.borderColor}`} shadow-lg`}>
       <div className="w-full px-6 py-4">
         <div className="flex items-center">
           {/* Logo */}
@@ -32,7 +34,11 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className="px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-white/70 hover:text-white hover:bg-white/10"
+                className={`px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? `${theme.buttonBackground} ${theme.textColor}`
+                    : `${theme.textColor} opacity-70 hover:opacity-100 ${theme.mode === 'classic' ? 'hover:bg-white/10' : 'hover:bg-gray-500/10'}`
+                }`}
               >
                 {tab.label}
               </button>

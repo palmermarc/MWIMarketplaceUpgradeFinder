@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Merriweather, Roboto } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { FloatingStyleChanger } from "@/components/FloatingStyleChanger";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,9 +44,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${merriweather.variable} ${roboto.variable} antialiased`}
       >
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            {children}
+            <FloatingStyleChanger />
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

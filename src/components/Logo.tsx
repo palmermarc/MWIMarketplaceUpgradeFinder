@@ -1,19 +1,21 @@
 'use client';
 
+import { useTheme } from '@/contexts/ThemeContext';
+
 interface LogoProps {
   fontSize?: number;
-  color?: string;
   className?: string;
 }
 
-export function Logo({ fontSize = 32, color = '#fff', className = '' }: LogoProps) {
+export function Logo({ fontSize = 32, className = '' }: LogoProps) {
+  const { theme } = useTheme();
+
   return (
     <div
-      className={className}
+      className={`${className} ${theme.textColor}`}
       style={{
         fontFamily: 'var(--font-merriweather), serif',
         fontSize: `${fontSize}px`,
-        color: color,
         fontWeight: 800,
         fontStyle: 'italic'
       }}

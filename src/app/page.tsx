@@ -10,8 +10,10 @@ import { CharacterStats } from '@/types/character';
 import { MarketData, UpgradeOpportunity } from '@/types/marketplace';
 import { CombatSlotItems } from '@/constants/combatItems';
 import { useMarketplaceAutoLoader } from '@/hooks/useMarketplaceAutoLoader';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Home() {
+  const { theme } = useTheme();
   const [character, setCharacter] = useState<CharacterStats | null>(null);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [rawCharacterData, setRawCharacterData] = useState<string | null>(null);
@@ -69,12 +71,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+    <div className={`min-h-screen w-full ${theme.mode === 'classic' ? 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900' : theme.backgroundColor}`}>
       {/* Header navigation always visible */}
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Marketplace status indicator */}
-      <div className="w-full bg-black/20 border-b border-white/10">
+      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : `${theme.cardBackground} border-b ${theme.borderColor}`}`}>
         <div className="max-w-7xl mx-auto px-6 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -85,11 +87,11 @@ export default function Home() {
                 marketplaceAutoLoader.getStatusColor() === 'red' ? 'bg-red-400' :
                 'bg-gray-400'
               } ${marketplaceAutoLoader.isLoading || marketplaceAutoLoader.isRefreshing ? 'animate-pulse' : ''}`}></div>
-              <span className="text-white text-sm">
+              <span className={`${theme.textColor} text-sm`}>
                 {marketplaceAutoLoader.getStatusText()}
               </span>
               {marketplaceAutoLoader.dataAge !== null && (
-                <span className="text-gray-400 text-xs">
+                <span className={`${theme.mode === 'light' ? 'text-gray-600' : 'text-gray-400'} text-xs`}>
                   (Age: {marketplaceAutoLoader.dataAge.toFixed(1)}h)
                 </span>
               )}
@@ -106,7 +108,7 @@ export default function Home() {
               )}
 
               {marketplaceAutoLoader.marketData && (
-                <span className="text-gray-300 text-xs">
+                <span className={`${theme.mode === 'light' ? 'text-gray-700' : 'text-gray-300'} text-xs`}>
                   {marketplaceAutoLoader.marketData.totalItems} items
                 </span>
               )}

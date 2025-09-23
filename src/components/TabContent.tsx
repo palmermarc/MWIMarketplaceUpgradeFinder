@@ -7,6 +7,7 @@ import { CombatSlotItems } from '@/constants/combatItems';
 import { CombatUpgradeAnalysisIframe } from './CombatUpgradeAnalysisIframe';
 import { CharacterImport } from './CharacterImport';
 import { CalculateCosts } from './CalculateCosts';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface TabContentProps {
   activeTab: NavigationTab;
@@ -29,6 +30,8 @@ export function TabContent({
   onMarketDataLoaded,
   onCombatItemsLoaded
 }: TabContentProps) {
+  const { theme } = useTheme();
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'import-character':
@@ -60,8 +63,8 @@ export function TabContent({
         return (
           <div className="w-full">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">⚔️ Combat Simulations</h2>
-              <p className="text-blue-200">
+              <h2 className={`text-2xl font-bold ${theme.textColor} mb-2`}>⚔️ Combat Simulations</h2>
+              <p className={`${theme.mode === 'light' ? 'text-gray-600' : 'text-blue-200'}`}>
                 Configure your equipment, houses, and abilities to simulate different combat scenarios.
               </p>
             </div>
@@ -88,8 +91,8 @@ export function TabContent({
         return (
           <div className="w-full">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">⚡ Quick Upgrades</h2>
-              <p className="text-blue-200">
+              <h2 className={`text-2xl font-bold ${theme.textColor} mb-2`}>⚡ Quick Upgrades</h2>
+              <p className={`${theme.mode === 'light' ? 'text-gray-600' : 'text-blue-200'}`}>
                 Marketplace upgrade opportunities based on cost per enhancement level. These suggestions prioritize cost efficiency and do not consider profit calculations or item value analysis.
               </p>
             </div>
@@ -102,7 +105,7 @@ export function TabContent({
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3 flex-1">
                           <div className="flex-1">
-                            <p className="text-white font-medium">{upgrade.currentItem.slot}</p>
+                            <p className={`${theme.textColor} font-medium`}>{upgrade.currentItem.slot}</p>
                             <p className="text-gray-300 text-sm">
                               {upgrade.currentItem.itemName} +{upgrade.currentItem.enhancementLevel} → {upgrade.suggestedUpgrade.itemName} +{upgrade.suggestedUpgrade.enhancementLevel}
                             </p>
@@ -147,8 +150,8 @@ export function TabContent({
         return (
           <div className="w-full">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">📊 Marketplace Analysis</h2>
-              <p className="text-blue-200">
+              <h2 className={`text-2xl font-bold ${theme.textColor} mb-2`}>📊 Marketplace Analysis</h2>
+              <p className={`${theme.mode === 'light' ? 'text-gray-600' : 'text-blue-200'}`}>
                 Detailed analysis of marketplace data and pricing trends.
               </p>
             </div>
@@ -158,22 +161,22 @@ export function TabContent({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-gray-300">Total Items:</span>
-                  <span className="text-white ml-2">{marketData.totalItems}</span>
+                  <span className={`${theme.textColor} ml-2`}>{marketData.totalItems}</span>
                 </div>
                 <div>
                   <span className="text-gray-300">Last Updated:</span>
-                  <span className="text-white ml-2">{new Date(marketData.lastUpdated).toLocaleString()}</span>
+                  <span className={`${theme.textColor} ml-2`}>{new Date(marketData.lastUpdated).toLocaleString()}</span>
                 </div>
                 <div>
                   <span className="text-gray-300">Upgrade Opportunities:</span>
-                  <span className="text-white ml-2">{upgrades.length}</span>
+                  <span className={`${theme.textColor} ml-2`}>{upgrades.length}</span>
                 </div>
               </div>
             </div>
 
             {/* Additional marketplace analysis content can be added here */}
             <div className="mt-6 bg-blue-500/20 border border-blue-500/50 rounded-lg p-6">
-              <h4 className="text-md font-bold text-blue-200 mb-3">Price Analysis</h4>
+              <h4 className={`text-md font-bold ${theme.mode === 'light' ? 'text-gray-700' : 'text-blue-200'} mb-3`}>Price Analysis</h4>
               <p className="text-blue-100 text-sm">
                 Detailed price analysis and market trends will be displayed here in future updates.
               </p>
