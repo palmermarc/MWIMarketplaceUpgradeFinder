@@ -9,6 +9,7 @@ import { SkillIcon } from './SkillIcon';
 import { AbilityIcon } from './AbilityIcon';
 import { MarketplaceService } from '@/services/marketplace';
 import { combatSimulationStorage, SavedCombatSimulation } from '@/services/combatSimulationStorage';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface CombatUpgradeAnalysisProps {
   character: CharacterStats;
@@ -123,6 +124,7 @@ const ZONE_DISPLAY_NAMES: { [key: string]: string } = Object.fromEntries(
 
 
 export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, combatItems = COMBAT_ITEMS }: CombatUpgradeAnalysisProps) {
+  const { theme } = useTheme();
   const [zoneData, setZoneData] = useState<ZoneData[]>([]);
   const [equipmentTestResults, setEquipmentTestResults] = useState<{ [slot: string]: { level: number; profit: number; exp: number; enhancementCost?: number; paybackDays?: number; itemName?: string; itemHrid?: string }[] }>({});
   const [abilityTestResults, setAbilityTestResults] = useState<{ [abilityHrid: string]: { level: number; profit: number; exp: number }[] }>({});
@@ -970,15 +972,16 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
 
   return (
-    <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
+    <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-purple-500/20 border border-purple-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(181, 0, 8, 0.2)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
       {/* Currently Equipped Items - Always show since we have combat items constants */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-purple-200">⚔️ Combat Simulations</h3>
+            <h3 className={`text-lg font-bold ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>⚔️ Combat Simulations</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowGear(!showGear)}
-                className="px-3 py-1 text-xs bg-purple-600/20 border border-purple-500/50 rounded text-purple-200 hover:bg-purple-600/30 transition-colors"
+                className={`px-3 py-1 text-xs rounded transition-colors ${theme.mode === 'dark' ? 'text-red-200' : 'bg-purple-600/20 border border-purple-500/50 text-purple-200 hover:bg-purple-600/30'}`}
+                style={theme.mode === 'dark' ? { backgroundColor: 'rgba(181, 0, 8, 0.2)', border: '1px solid rgba(181, 0, 8, 0.5)' } : {}}
               >
                 {showGear ? 'Hide Gear' : 'Show Gear'}
               </button>
@@ -1129,7 +1132,8 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
               return (
                 <div
                   key={slot}
-                  className="bg-black/20 rounded-lg p-3 border border-purple-500/30"
+                  className={`bg-black/20 rounded-lg p-3 border ${theme.mode === 'dark' ? '' : 'border-purple-500/30'}`}
+                  style={theme.mode === 'dark' ? { borderColor: 'rgba(181, 0, 8, 0.3)' } : {}}
                 >
                   <div className="flex items-center gap-3">
                     {/* Item Icon */}
@@ -1138,7 +1142,8 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                         <ItemIcon
                           itemHrid={`/items/${equipmentItem.item.toLowerCase().replace(/\s+/g, '_')}`}
                           size={40}
-                          className="rounded border border-purple-400/50"
+                          className={`rounded border ${theme.mode === 'dark' ? '' : 'border-purple-400/50'}`}
+                          style={theme.mode === 'dark' ? { borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}
                         />
                       ) : (
                         <div className="w-10 h-10 bg-gray-600 rounded border border-gray-500 flex items-center justify-center">
@@ -1154,7 +1159,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                       </h5>
                       {equipmentItem && equipmentItem.item !== '' ? (
                         <div>
-                          <p className="text-purple-200 text-xs">
+                          <p className={`text-xs ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>
                             {equipmentItem.item} (+{equipmentItem.enhancement})
                           </p>
                           <button
@@ -1172,7 +1177,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                     {/* Enhancement Level Input - Right Side */}
                     {equipmentItem && equipmentItem.item !== '' && (
                       <div className="flex items-center gap-2">
-                        <label className="text-purple-200 text-xs font-medium">
+                        <label className={`text-xs font-medium ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>
                           Enhancement:
                         </label>
                         <input
@@ -1187,7 +1192,8 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                               [slot]: newLevel
                             }));
                           }}
-                          className="w-16 px-2 py-1 bg-black/30 border border-purple-500/50 rounded text-white text-xs focus:border-purple-400 focus:outline-none"
+                          className={`w-16 px-2 py-1 bg-black/30 border rounded text-white text-xs focus:outline-none ${theme.mode === 'dark' ? '' : 'border-purple-500/50 focus:border-purple-400'}`}
+                          style={theme.mode === 'dark' ? { borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}
                         />
                       </div>
                     )}
@@ -1200,7 +1206,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
           {/* Additional Sim Slots */}
           {additionalSimSlots.length > 0 && (
             <div className="mt-6">
-              <h4 className="text-md font-bold text-purple-200 mb-3">⚙️ Additional Simulations</h4>
+              <h4 className={`text-md font-bold mb-3 ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>⚙️ Additional Simulations</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {additionalSimSlots.map((simSlot) => {
                   // Get available items for this slot from combat items
@@ -1300,15 +1306,18 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
             <span className="text-gray-300">
               {isInitializing ? 'Initializing combat simulator...' : `Analyzing ${ZONE_DISPLAY_NAMES[selectedCombatZone]} (Tier ${selectedCombatTier})...`}
             </span>
-            <span className="text-purple-300">
+            <span className={`${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>
               🎯 TARGETED ANALYSIS
             </span>
           </div>
 
           <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
             <div
-              className="bg-purple-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              className={`h-2 rounded-full transition-all duration-300 ${theme.mode === 'dark' ? '' : 'bg-purple-500'}`}
+              style={{
+                ...(theme.mode === 'dark' ? { backgroundColor: '#B50008' } : {}),
+                width: `${(progress.current / progress.total) * 100}%`
+              }}
             ></div>
           </div>
 

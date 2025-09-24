@@ -5,6 +5,7 @@
   --foreground: #171717;
   --primary-orange: #e05a3e;
   --secondary-orange: #E8000A;
+  --dark-blood-orange: #B50008;
   --dark-olive: #556b2f;
   --header-dark: #1a1a1a;
 }
@@ -18,6 +19,7 @@
   --font-roboto: var(--font-roboto);
   --color-primary-orange: var(--primary-orange);
   --color-secondary-orange: var(--secondary-orange);
+  --color-dark-blood-orange: var(--dark-blood-orange);
   --color-dark-olive: var(--dark-olive);
   --color-header-dark: var(--header-dark);
 }

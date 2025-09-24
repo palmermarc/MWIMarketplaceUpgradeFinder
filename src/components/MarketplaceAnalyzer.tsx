@@ -6,6 +6,7 @@ import { CharacterStats } from '@/types/character';
 import { CombatSlotItems } from '@/constants/combatItems';
 import { ItemIcon } from './ItemIcon';
 import { CombatUpgradeAnalysisIframe } from './CombatUpgradeAnalysisIframe';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface MarketplaceAnalyzerProps {
   character: CharacterStats;
@@ -16,6 +17,7 @@ interface MarketplaceAnalyzerProps {
 }
 
 export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, combatItems, onUpgradesFound }: MarketplaceAnalyzerProps) {
+  const { theme } = useTheme();
   const [analysis, setAnalysis] = useState<ItemAnalysis[]>([]);
   const [upgrades, setUpgrades] = useState<UpgradeOpportunity[]>([]);
   const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
@@ -224,28 +226,31 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
       {/* Quick Upgrades Accordion - Full Width */}
       {upgrades.length > 0 && (
         <div className="w-full">
-          <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg overflow-hidden">
+          <div className={`rounded-lg overflow-hidden ${theme.mode === 'dark' ? 'border' : 'bg-purple-500/20 border border-purple-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(181, 0, 8, 0.2)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
             {/* Accordion Header */}
             <button
               onClick={() => setShowQuickUpgrades(!showQuickUpgrades)}
-              className="w-full px-6 py-4 bg-purple-500/30 hover:bg-purple-500/40 transition-colors flex items-center justify-between"
+              className={`w-full px-6 py-4 transition-colors flex items-center justify-between ${theme.mode === 'dark' ? '' : 'bg-purple-500/30 hover:bg-purple-500/40'}`}
+              style={theme.mode === 'dark' ? {
+                backgroundColor: 'rgba(181, 0, 8, 0.3)'
+              } : {}}
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg font-bold text-purple-200">
+                <span className={`text-lg font-bold ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>
                   Quick Upgrade Opportunities ({upgrades.length} found)
                 </span>
-                <span className="text-purple-300 text-sm">
+                <span className={`text-sm ${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>
                   Click to {showQuickUpgrades ? 'hide' : 'view'} marketplace upgrade options
                 </span>
               </div>
-              <div className="text-purple-200 text-xl">
+              <div className={`text-xl ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>
                 {showQuickUpgrades ? '▼' : '▶'}
               </div>
             </button>
 
             {/* Accordion Content */}
             {showQuickUpgrades && (
-              <div className="p-6 border-t border-purple-500/30">
+              <div className={`p-6 border-t ${theme.mode === 'dark' ? '' : 'border-purple-500/30'}`} style={theme.mode === 'dark' ? { borderColor: 'rgba(181, 0, 8, 0.3)' } : {}}>
                 <div className="space-y-3">
                   {upgrades.slice(0, 10).map((upgrade, index) => (
                     <div key={index} className="bg-black/20 rounded-lg p-4">

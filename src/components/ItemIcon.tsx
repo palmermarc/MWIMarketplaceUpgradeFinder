@@ -6,9 +6,10 @@ interface ItemIconProps {
   itemHrid: string;
   className?: string;
   size?: number;
+  style?: React.CSSProperties;
 }
 
-export function ItemIcon({ itemHrid, className = "", size = 24 }: ItemIconProps) {
+export function ItemIcon({ itemHrid, className = "", size = 24, style = {} }: ItemIconProps) {
   const [iconUrl, setIconUrl] = useState<string>('');
 
   useEffect(() => {
@@ -84,6 +85,7 @@ export function ItemIcon({ itemHrid, className = "", size = 24 }: ItemIconProps)
       width={size}
       height={size}
       className={className}
+      style={style}
     />
   );
 }

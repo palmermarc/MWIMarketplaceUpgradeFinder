@@ -245,7 +245,10 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
         <button
           onClick={handleImport}
           disabled={!jsonInput.trim() || isLoading || isLoadingCombatItems}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`text-white px-8 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${theme.mode === 'dark' ? '' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'}`}
+          style={theme.mode === 'dark' ? {
+            background: 'linear-gradient(to right, #B50008, #E8000A)'
+          } : {}}
         >
           {(isLoading || isLoadingCombatItems) ? 'Processing...' : 'Import Character'}
         </button>
@@ -358,22 +361,22 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
           </div>
 
           {/* Combat Items Status */}
-          <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
-            <h4 className="text-purple-200 font-medium mb-2">⚔️ Combat Items</h4>
+          <div className={`rounded-lg p-4 ${theme.mode === 'dark' ? 'border' : 'bg-purple-500/20 border border-purple-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(181, 0, 8, 0.2)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
+            <h4 className={`font-medium mb-2 ${theme.mode === 'dark' ? 'text-red-200' : 'text-purple-200'}`}>⚔️ Combat Items</h4>
             {combatItemsStorage.combatItems ? (
               <div className="space-y-1">
-                <p className="text-purple-300 text-sm">
+                <p className={`text-sm ${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>
                   Last updated: {new Date(combatItemsStorage.combatItems.timestamp).toLocaleDateString()}
                 </p>
-                <p className="text-purple-400 text-xs">
+                <p className={`text-xs ${theme.mode === 'dark' ? 'text-red-400' : 'text-purple-400'}`}>
                   Source: {combatItemsStorage.combatItems.source}
                 </p>
-                <p className="text-purple-400 text-xs">
+                <p className={`text-xs ${theme.mode === 'dark' ? 'text-red-400' : 'text-purple-400'}`}>
                   {Object.keys(combatItemsStorage.combatItems.data).length} equipment slots
                 </p>
               </div>
             ) : (
-              <p className="text-purple-300 text-sm">No stored data</p>
+              <p className={`text-sm ${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>No stored data</p>
             )}
           </div>
 

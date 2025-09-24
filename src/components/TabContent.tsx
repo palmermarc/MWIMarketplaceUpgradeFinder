@@ -98,7 +98,7 @@ export function TabContent({
             </div>
 
             {upgrades.length > 0 ? (
-              <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-6">
+              <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-purple-500/20 border border-purple-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(181, 0, 8, 0.2)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
                 <div className="space-y-3">
                   {upgrades.map((upgrade, index) => (
                     <div key={index} className="bg-black/20 rounded-lg p-4">

@@ -8,6 +8,7 @@ import { HOUSE_COSTS, calculateHouseUpgradeCost, HouseUpgradeCostCalculation } f
 import { calculateHouseMaterialCosts, ItemCostCalculationResult } from '@/services/itemCostCalculator';
 import { AbilityIcon } from './AbilityIcon';
 import { SkillIcon } from './SkillIcon';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface CalculateCostsProps {
   character: CharacterStats;
@@ -27,6 +28,7 @@ interface AbilityLevel {
 }
 
 export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
+  const { theme } = useTheme();
   const [houseRooms, setHouseRooms] = useState<{ [roomHrid: string]: HouseRoom }>({});
   const [abilityLevels, setAbilityLevels] = useState<{ [abilityHrid: string]: AbilityLevel }>({});
   const [houseMaterialCosts, setHouseMaterialCosts] = useState<{ [roomHrid: string]: ItemCostCalculationResult }>({});
@@ -320,10 +322,10 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
 
                       {/* Additional Items if Crafted Yourself */}
                       <div>
-                        <span className="text-purple-300 font-medium mb-2 block">🔨 Additional Items if Crafted Yourself:</span>
+                        <span className={`font-medium mb-2 block ${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>🔨 Additional Items if Crafted Yourself:</span>
                         <div className="ml-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-purple-300">Total Cost:</span>
+                            <span className={`${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>Total Cost:</span>
                             <span className="text-white">0 coins</span>
                             <span className="text-gray-400 text-xs">(Future calculation)</span>
                           </div>
@@ -456,7 +458,7 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                           {upgrade ? (
                             <div>
                               <div className="text-white font-medium">{upgrade.booksRequired.toLocaleString()}</div>
-                              <div className="text-purple-300 text-xs truncate">{upgrade.bookName}</div>
+                              <div className={`text-xs truncate ${theme.mode === 'dark' ? 'text-red-300' : 'text-purple-300'}`}>{upgrade.bookName}</div>
                             </div>
                           ) : abilityLevel.targetLevel > abilityLevel.currentLevel ? (
                             <div className="text-gray-400 text-sm">Calculating...</div>
