@@ -3,9 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --blood-orange: #E8000A;
-  --blood-orange-dark: #C30008;
-  --dark-green-gray: #36453F;
+  --primary-orange: #e05a3e;
+  --secondary-orange: #e2725b;
+  --dark-olive: #556b2f;
   --header-dark: #1a1a1a;
 }
 
@@ -16,9 +16,9 @@
   --font-mono: var(--font-geist-mono);
   --font-merriweather: var(--font-merriweather);
   --font-roboto: var(--font-roboto);
-  --color-blood-orange: var(--blood-orange);
-  --color-blood-orange-dark: var(--blood-orange-dark);
-  --color-dark-green-gray: var(--dark-green-gray);
+  --color-primary-orange: var(--primary-orange);
+  --color-secondary-orange: var(--secondary-orange);
+  --color-dark-olive: var(--dark-olive);
   --color-header-dark: var(--header-dark);
 }
 

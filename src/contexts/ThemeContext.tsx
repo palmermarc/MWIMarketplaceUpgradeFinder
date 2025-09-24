@@ -94,7 +94,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         bodyStyle.backgroundColor = '#f5f5f5';
         break;
       case 'dark':
-        bodyStyle.backgroundColor = '#36453F'; // Dark green-gray from bookmarks
+        bodyStyle.backgroundColor = '#556b2f'; // Dark olive green
         break;
       default:
         bodyStyle.backgroundColor = '#111827'; // gray-900

@@ -15,8 +15,8 @@ export function FloatingStyleChanger() {
         className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full ${theme.buttonBackground} ${theme.buttonHover} ${theme.textColor} shadow-lg transition-all duration-200 flex items-center justify-center border ${theme.borderColor}`}
         title="Change Theme"
         style={theme.mode === 'dark' ? {
-          backgroundColor: '#E8000A',
-          borderColor: '#E8000A',
+          backgroundColor: '#e05a3e',
+          borderColor: '#e05a3e',
           textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)'
         } : {}}
       >
@@ -97,8 +97,8 @@ export function FloatingStyleChanger() {
                         )}
                         {themeOption.mode === 'dark' && (
                           <>
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#36453F', border: '1px solid #E8000A' }}></div>
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E8000A' }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#556b2f', border: '1px solid #e05a3e' }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#e05a3e' }}></div>
                           </>
                         )}
                       </div>

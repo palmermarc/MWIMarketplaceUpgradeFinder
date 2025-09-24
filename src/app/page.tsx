@@ -76,7 +76,7 @@ export default function Home() {
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Marketplace status indicator */}
-      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'dark' ? { backgroundColor: '#36453F', borderBottomColor: '#E8000A' } : {}}>
+      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'dark' ? { backgroundColor: '#556b2f', borderBottomColor: '#e05a3e' } : {}}>
         <div className="max-w-7xl mx-auto px-6 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -103,12 +103,12 @@ export default function Home() {
                   onClick={marketplaceAutoLoader.forceRefresh}
                   className={`px-3 py-1 text-xs rounded transition-colors ${
                     theme.mode === 'dark'
-                      ? 'text-white hover:bg-orange-600/30'
+                      ? 'text-white hover:bg-orange-700/30'
                       : 'bg-yellow-600/20 border border-yellow-500/50 text-yellow-200 hover:bg-yellow-600/30'
                   }`}
                   style={theme.mode === 'dark' ? {
-                    backgroundColor: '#E8000A',
-                    border: '1px solid #E8000A',
+                    backgroundColor: '#e05a3e',
+                    border: '1px solid #e05a3e',
                     textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)'
                   } : {}}
                 >
