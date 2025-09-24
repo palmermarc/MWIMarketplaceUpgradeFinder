@@ -76,7 +76,7 @@ export default function Home() {
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Marketplace status indicator */}
-      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'dark' ? { backgroundColor: '#556b2f', borderBottomColor: '#e05a3e' } : {}}>
+      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'dark' ? { backgroundColor: '#556b2f', borderBottomColor: '#E8000A' } : {}}>
         <div className="max-w-7xl mx-auto px-6 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

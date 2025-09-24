@@ -98,7 +98,7 @@ export function FloatingStyleChanger() {
                         {themeOption.mode === 'dark' && (
                           <>
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#556b2f', border: '1px solid #e05a3e' }}></div>
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#e05a3e' }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E8000A' }}></div>
                           </>
                         )}
                       </div>
