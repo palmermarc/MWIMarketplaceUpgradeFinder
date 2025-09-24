@@ -51,9 +51,9 @@ export function TabContent({
         if (!character) {
           return (
             <div className="w-full">
-              <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6">
-                <h3 className="text-lg font-bold text-yellow-200 mb-2">Character Required</h3>
-                <p className="text-yellow-100">
+              <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-yellow-500/20 border border-yellow-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(55, 65, 81, 0.3)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
+                <h3 className={`text-lg font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
+                <p className={`${theme.mode === 'dark' ? 'text-gray-300' : 'text-yellow-100'}`}>
                   Please import your character data first using the &quot;Import Character&quot; tab.
                 </p>
               </div>
@@ -79,9 +79,9 @@ export function TabContent({
         if (!character || !marketData) {
           return (
             <div className="w-full">
-              <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6">
-                <h3 className="text-lg font-bold text-yellow-200 mb-2">Character Required</h3>
-                <p className="text-yellow-100">
+              <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-yellow-500/20 border border-yellow-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(55, 65, 81, 0.3)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
+                <h3 className={`text-lg font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
+                <p className={`${theme.mode === 'dark' ? 'text-gray-300' : 'text-yellow-100'}`}>
                   Please import your character data first using the &quot;Import Character&quot; tab.
                 </p>
               </div>
@@ -188,9 +188,9 @@ export function TabContent({
         if (!character) {
           return (
             <div className="w-full">
-              <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-6">
-                <h3 className="text-lg font-bold text-yellow-200 mb-2">Character Required</h3>
-                <p className="text-yellow-100">
+              <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-yellow-500/20 border border-yellow-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(55, 65, 81, 0.3)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
+                <h3 className={`text-lg font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
+                <p className={`${theme.mode === 'dark' ? 'text-gray-300' : 'text-yellow-100'}`}>
                   Please import your character data first using the &quot;Import Character&quot; tab.
                 </p>
               </div>
