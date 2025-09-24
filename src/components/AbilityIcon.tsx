@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 interface AbilityIconProps {
   abilityId: string;
@@ -66,12 +67,13 @@ export function AbilityIcon({ abilityId, className = "", size = 24 }: AbilityIco
   }
 
   return (
-    <img
+    <Image
       src={iconUrl}
       alt={abilityId}
       width={size}
       height={size}
       className={className}
+      unoptimized={true}
     />
   );
 }

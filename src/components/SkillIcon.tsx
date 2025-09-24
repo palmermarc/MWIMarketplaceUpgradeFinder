@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 interface SkillIconProps {
   skillId: string;
@@ -66,12 +67,13 @@ export function SkillIcon({ skillId, className = "", size = 24 }: SkillIconProps
   }
 
   return (
-    <img
+    <Image
       src={iconUrl}
       alt={skillId}
       width={size}
       height={size}
       className={className}
+      unoptimized={true}
     />
   );
 }

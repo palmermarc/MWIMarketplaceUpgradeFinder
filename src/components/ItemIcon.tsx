@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 interface ItemIconProps {
   itemHrid: string;
@@ -79,13 +80,14 @@ export function ItemIcon({ itemHrid, className = "", size = 24, style = {} }: It
   }
 
   return (
-    <img
+    <Image
       src={iconUrl}
       alt={itemHrid}
       width={size}
       height={size}
       className={className}
       style={style}
+      unoptimized={true}
     />
   );
 }
