@@ -1,6 +1,5 @@
 'use client';
 
-import { Logo } from './Logo';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export type NavigationTab = 'import-character' | 'find-upgrades' | 'calculate-costs' | 'quick-upgrades' | 'marketplace-analysis';
@@ -26,7 +25,18 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
       <div className="w-full px-6 py-4">
         <div className="flex items-center">
           {/* Logo */}
-          <Logo fontSize={40} className="flex-shrink-0" style={theme.mode === 'dark' ? { textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)' } : {}} />
+          <div
+            className={`flex-shrink-0 ${theme.textColor}`}
+            style={{
+              fontFamily: 'var(--font-merriweather), serif',
+              fontSize: '40px',
+              fontWeight: 800,
+              fontStyle: 'italic',
+              ...(theme.mode === 'dark' ? { textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)' } : {})
+            }}
+          >
+            MWI Upgrade Finder
+          </div>
 
           {/* Navigation Tabs - Centered */}
           <nav className="flex space-x-1 flex-1 justify-center">

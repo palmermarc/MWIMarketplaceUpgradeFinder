@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { CharacterImport } from '@/components/CharacterImport';
 import { MarketplaceAnalyzer } from '@/components/MarketplaceAnalyzer';
-import { Logo } from '@/components/Logo';
 import { Navigation, NavigationTab } from '@/components/Navigation';
 import { TabContent } from '@/components/TabContent';
 import { CharacterStats } from '@/types/character';
