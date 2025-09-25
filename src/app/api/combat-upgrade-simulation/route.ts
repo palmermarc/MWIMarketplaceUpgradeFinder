@@ -33,13 +33,14 @@ interface UpgradeSimulationRequest {
   character: CharacterStats;
   rawCharacterData?: string;
   targetZone: string;
+  targetTier?: string;
   optimizeFor: 'profit' | 'exp';
   maxEnhancementTiers: number;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { character, rawCharacterData, targetZone, optimizeFor, maxEnhancementTiers }: UpgradeSimulationRequest = await request.json();
+    const { character, rawCharacterData, targetZone, targetTier, optimizeFor, maxEnhancementTiers }: UpgradeSimulationRequest = await request.json();
 
     console.log('🔧 Starting equipment upgrade simulation...');
     console.log('Target zone:', targetZone);
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
 
       // Run baseline simulation
       console.log('📊 Running baseline simulation...');
-      const baselineResults = await runSingleSimulation(page, targetZone);
+      const baselineResults = await runSingleSimulation(page, targetZone, targetTier);
 
       const upgradeTests: UpgradeTestResult[] = [];
       let simulationCount = 1;
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
             await updateEnhancementField(page, plan.slot, testLevel);
 
             // Run simulation
-            const testResult = await runSingleSimulation(page, targetZone);
+            const testResult = await runSingleSimulation(page, targetZone, targetTier);
 
             upgradeTests.push({
               slot: plan.slot,
@@ -326,14 +327,22 @@ async function updateEnhancementField(page: Page, slot: string, level: number) {
 }
 
 // Helper function to run a single simulation
-async function runSingleSimulation(page: Page, targetZone: string) {
+async function runSingleSimulation(page: Page, targetZone: string, targetTier?: string) {
   // Configure simulation settings
-  await page.evaluate((targetZone) => {
+  await page.evaluate((targetZone, targetTier) => {
     // Select target zone
     const selectZone = document.querySelector('#selectZone') as HTMLSelectElement;
     if (selectZone) {
       selectZone.value = targetZone;
       selectZone.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Set difficulty tier to the selected value (default to tier_1 if not provided)
+    const selectDifficulty = document.querySelector('#selectDifficulty') as HTMLSelectElement;
+    if (selectDifficulty) {
+      const tierValue = targetTier || 'tier_1';
+      selectDifficulty.value = tierValue;
+      selectDifficulty.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     // Select player 1
@@ -342,7 +351,7 @@ async function runSingleSimulation(page: Page, targetZone: string) {
       player1Element.checked = true;
       player1Element.dispatchEvent(new Event('change', { bubbles: true }));
     }
-  }, targetZone);
+  }, targetZone, targetTier);
 
   await new Promise(resolve => setTimeout(resolve, 500));
 

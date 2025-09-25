@@ -274,7 +274,7 @@ async function launchBrowserForEnvironment() {
 }
 
 export async function POST(request: NextRequest) {
-  const { character, rawCharacterData, targetZone, optimizeFor, selectedLevels, abilityTargetLevels, houseTargetLevels }: UpgradeSimulationRequest = await request.json();
+  const { character, rawCharacterData, targetZone, targetTier, optimizeFor, selectedLevels, abilityTargetLevels, houseTargetLevels }: UpgradeSimulationRequest = await request.json();
 
   // Create a readable stream for Server-Sent Events
   const encoder = new TextEncoder();
@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
             progress: 20
           })}\n\n`));
 
-          const baselineResults = await runSingleSimulation(page, targetZone);
+          const baselineResults = await runSingleSimulation(page, targetZone, targetTier);
 
           safeEnqueue({
             type: 'baseline_complete',
@@ -524,7 +524,7 @@ export async function POST(request: NextRequest) {
                 await updateEnhancementField(page, plan.slot, testLevel);
 
                 // Run simulation (abilities stay at baseline for equipment tests)
-                const testResult = await runSingleSimulation(page, targetZone);
+                const testResult = await runSingleSimulation(page, targetZone, targetTier);
 
                 // Calculate enhancement cost and payback period using MarketplaceService
                 const enhancementCost = await calculateEnhancementCost(plan.currentLevel, testLevel, plan.itemHrid);
@@ -624,7 +624,7 @@ export async function POST(request: NextRequest) {
               await setAbilityLevels(page, character, abilityTargetLevels, abilityPlan.abilityHrid);
 
               // Run simulation
-              const testResult = await runSingleSimulation(page, targetZone);
+              const testResult = await runSingleSimulation(page, targetZone, targetTier);
 
               // Calculate ability upgrade cost and payback period
               const abilityCostInfo = await calculateAbilityCost(abilityPlan.abilityHrid, abilityPlan.currentLevel, abilityPlan.targetLevel);
@@ -732,7 +732,7 @@ export async function POST(request: NextRequest) {
               await setHouseLevels(page, character, singleHouseTest, housePlan.roomHrid);
 
               // Run simulation
-              const testResult = await runSingleSimulation(page, targetZone);
+              const testResult = await runSingleSimulation(page, targetZone, targetTier);
 
               // Calculate actual house upgrade cost (coins + materials from marketplace)
               const houseCost = await calculateHouseCost(housePlan.roomHrid, housePlan.currentLevel, housePlan.targetLevel);
@@ -1258,13 +1258,13 @@ async function extractCombatSlotItems(page: Page) {
   return combatSlotItems;
 }
 
-async function runSingleSimulation(page: Page, targetZone: string) {
+async function runSingleSimulation(page: Page, targetZone: string, targetTier?: string) {
   if (isLocal) {
     console.log(`🎯 LOCAL DEBUG: Setting zone to ${targetZone} and running simulation...`);
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
-  await page.evaluate((targetZone) => {
+  await page.evaluate((targetZone, targetTier) => {
     const selectZone = document.querySelector('#selectZone') as HTMLSelectElement;
     if (selectZone) {
       console.log(`🎯 Setting combat zone to: ${targetZone}`);
@@ -1272,6 +1272,17 @@ async function runSingleSimulation(page: Page, targetZone: string) {
       selectZone.dispatchEvent(new Event('change', { bubbles: true }));
     } else {
       console.log('❌ Zone selector not found');
+    }
+
+    // Set difficulty tier to the selected value (default to tier_1 if not provided)
+    const selectDifficulty = document.querySelector('#selectDifficulty') as HTMLSelectElement;
+    if (selectDifficulty) {
+      const tierValue = targetTier || 'tier_1';
+      console.log(`🎯 Setting combat difficulty to: ${tierValue}`);
+      selectDifficulty.value = tierValue;
+      selectDifficulty.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      console.log('❌ Difficulty selector not found');
     }
 
     const player1Element = document.querySelector('#player1') as HTMLInputElement;
@@ -1282,7 +1293,7 @@ async function runSingleSimulation(page: Page, targetZone: string) {
     } else {
       console.log('❌ Player 1 checkbox not found');
     }
-  }, targetZone);
+  }, targetZone, targetTier);
 
   await new Promise(resolve => setTimeout(resolve, 500));
 
