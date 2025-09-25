@@ -523,14 +523,61 @@ export async function POST(request: NextRequest) {
               try {
                 // Set equipment item if there's an override for this slot
                 if (equipmentOverrides && equipmentOverrides[plan.slot]) {
-                  console.log(`🔄 Setting equipment override for ${plan.slot}: ${equipmentOverrides[plan.slot]}`);
-                  await updateEquipmentSelection(page, plan.slot, equipmentOverrides[plan.slot]);
-                  // Wait a moment for the equipment change to register
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                }
+                  console.log(`🔄 Testing with equipment override for ${plan.slot}: ${equipmentOverrides[plan.slot]}`);
 
-                // Update enhancement level field
-                await updateEnhancementField(page, plan.slot, testLevel);
+                  // Create modified character data with the new item
+                  if (rawCharacterData) {
+                    try {
+                      const parsedData = JSON.parse(rawCharacterData);
+                      const equipmentArray = parsedData.player?.equipment || [];
+
+                      // Map the slot name for the equipment location
+                      const lookupSlot = plan.slot === 'weapon' ? 'main_hand' : plan.slot;
+                      const itemLocationHrid = `/item_locations/${lookupSlot}`;
+
+                      // Create a copy of the equipment array
+                      const modifiedEquipment = equipmentArray.map((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => {
+                        if (item.itemLocationHrid === itemLocationHrid) {
+                          return {
+                            ...item,
+                            itemHrid: equipmentOverrides[plan.slot],
+                            enhancementLevel: testLevel
+                          };
+                        }
+                        return item;
+                      });
+
+                      // If item doesn't exist, add it
+                      if (!modifiedEquipment.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => item.itemLocationHrid === itemLocationHrid)) {
+                        modifiedEquipment.push({
+                          itemLocationHrid,
+                          itemHrid: equipmentOverrides[plan.slot],
+                          enhancementLevel: testLevel
+                        });
+                      }
+
+                      const modifiedCharacterData = JSON.stringify({
+                        ...parsedData,
+                        player: {
+                          ...parsedData.player,
+                          equipment: modifiedEquipment
+                        }
+                      });
+
+                      console.log(`📝 Re-importing character data with new equipment for test`);
+                      await importCharacterData(page, modifiedCharacterData);
+                    } catch (error) {
+                      console.error('❌ Failed to create modified character data:', error);
+                    }
+                  } else {
+                    // Fallback to the old method if no raw character data
+                    await updateEquipmentSelection(page, plan.slot, equipmentOverrides[plan.slot]);
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                  }
+                } else {
+                  // Update enhancement level field for regular tests
+                  await updateEnhancementField(page, plan.slot, testLevel);
+                }
 
                 // Run simulation (abilities stay at baseline for equipment tests)
                 const testResult = await runSingleSimulation(page, targetZone, targetTier);
@@ -580,14 +627,13 @@ export async function POST(request: NextRequest) {
                   paybackDays: paybackDays === Infinity ? undefined : paybackDays
                 });
 
-                // Reset enhancement level for next test
-                await updateEnhancementField(page, plan.slot, plan.currentLevel);
-
-                // Reset equipment item if there was an override
-                if (equipmentOverrides && equipmentOverrides[plan.slot]) {
-                  console.log(`🔄 Resetting equipment for ${plan.slot} back to original: ${plan.itemHrid}`);
-                  await updateEquipmentSelection(page, plan.slot, plan.itemHrid);
-                  await new Promise(resolve => setTimeout(resolve, 500));
+                // Reset to baseline character data if we used an equipment override
+                if (equipmentOverrides && equipmentOverrides[plan.slot] && rawCharacterData) {
+                  console.log(`🔄 Resetting to baseline character data after equipment override test`);
+                  await importCharacterData(page, rawCharacterData);
+                } else {
+                  // Reset enhancement level for regular tests
+                  await updateEnhancementField(page, plan.slot, plan.currentLevel);
                 }
 
               } catch (error) {
@@ -1068,10 +1114,26 @@ async function updateEquipmentSelection(page: Page, slot: string, itemHrid: stri
 
     if (equipmentSelect) {
       console.log(`🔄 Setting equipment for ${slot} to: ${itemHrid}`);
+
+      // Set the value
       equipmentSelect.value = itemHrid;
+
+      // Dispatch comprehensive events to ensure the change is recognized
       equipmentSelect.dispatchEvent(new Event('input', { bubbles: true }));
       equipmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
       equipmentSelect.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      // Also try focus/focusout events in case they're needed
+      equipmentSelect.dispatchEvent(new Event('focus', { bubbles: true }));
+      equipmentSelect.dispatchEvent(new Event('focusout', { bubbles: true }));
+
+      // Trigger any custom events the simulator might be listening for
+      equipmentSelect.dispatchEvent(new CustomEvent('equipment-changed', {
+        bubbles: true,
+        detail: { slot, itemHrid }
+      }));
+
+      console.log(`✅ Equipment set for ${slot}: ${equipmentSelect.value}`);
       return true;
     } else {
       console.log(`❌ Equipment selector not found: ${equipmentSelectId}`);
