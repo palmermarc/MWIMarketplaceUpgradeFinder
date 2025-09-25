@@ -326,62 +326,6 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
     );
   };
 
-  // Function to create modified character data with additional sim slots
-  const createModifiedCharacterData = (originalData: string, additionalSlots: typeof additionalSimSlots): string => {
-    if (!originalData || additionalSlots.length === 0) {
-      return originalData;
-    }
-
-    try {
-      const parsedData = JSON.parse(originalData);
-      const equipmentArray = parsedData.player?.equipment || [];
-
-      // Create a copy of the equipment array
-      const modifiedEquipment = [...equipmentArray];
-
-      // Apply changes from additional sim slots
-      additionalSlots.forEach(simSlot => {
-        if (!simSlot.selectedItem) return;
-
-        // Map the slot name for the equipment location
-        const lookupSlot = simSlot.slot === 'weapon' ? 'main_hand' : simSlot.slot;
-        const itemLocationHrid = `/item_locations/${lookupSlot}`;
-
-        // Find existing equipment for this slot
-        const existingIndex = modifiedEquipment.findIndex(item =>
-          item.itemLocationHrid === itemLocationHrid
-        );
-
-        const newEquipmentItem = {
-          itemLocationHrid,
-          itemHrid: simSlot.selectedItem,
-          enhancementLevel: simSlot.enhancementLevel
-        };
-
-        if (existingIndex >= 0) {
-          // Replace existing item
-          modifiedEquipment[existingIndex] = newEquipmentItem;
-        } else {
-          // Add new item
-          modifiedEquipment.push(newEquipmentItem);
-        }
-      });
-
-      // Create modified character data
-      const modifiedData = {
-        ...parsedData,
-        player: {
-          ...parsedData.player,
-          equipment: modifiedEquipment
-        }
-      };
-
-      return JSON.stringify(modifiedData);
-    } catch (error) {
-      console.error('Failed to create modified character data:', error);
-      return originalData;
-    }
-  };
 
   // Function to parse raw character data and create equipment display data
   const parseEquipmentData = (): EquipmentItem[] => {
@@ -767,23 +711,18 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       console.log(`🎯 Total tests planned: ${totalTests}`);
 
       // Start streaming upgrade analysis with real-time updates
-      // Create modified character data if we have additional sim slots
-      const modifiedCharacterData = additionalSlotChanges.length > 0 && rawCharacterData
-        ? createModifiedCharacterData(rawCharacterData, additionalSimSlots)
-        : rawCharacterData;
-
       console.log('🚀 Starting streaming upgrade analysis...');
       console.log('Character:', character);
       console.log('Request:', request);
       console.log('Raw character data length:', rawCharacterData?.length || 0);
       if (additionalSlotChanges.length > 0) {
-        console.log('📝 Using modified character data with additional sim slots:', additionalSlotChanges.length);
+        console.log('📝 Equipment overrides will be tested individually:', additionalSlotChanges.length);
       }
 
       await CombatSimulatorApiService.analyzeEquipmentUpgradesStream(
         character,
         request,
-        modifiedCharacterData || null,
+        rawCharacterData || null,
         (event) => {
           console.log('📡 Stream event received:', event.type, event);
 
