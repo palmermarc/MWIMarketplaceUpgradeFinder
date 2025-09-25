@@ -326,6 +326,63 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
     );
   };
 
+  // Function to create modified character data with additional sim slots
+  const createModifiedCharacterData = (originalData: string, additionalSlots: typeof additionalSimSlots): string => {
+    if (!originalData || additionalSlots.length === 0) {
+      return originalData;
+    }
+
+    try {
+      const parsedData = JSON.parse(originalData);
+      const equipmentArray = parsedData.player?.equipment || [];
+
+      // Create a copy of the equipment array
+      const modifiedEquipment = [...equipmentArray];
+
+      // Apply changes from additional sim slots
+      additionalSlots.forEach(simSlot => {
+        if (!simSlot.selectedItem) return;
+
+        // Map the slot name for the equipment location
+        const lookupSlot = simSlot.slot === 'weapon' ? 'main_hand' : simSlot.slot;
+        const itemLocationHrid = `/item_locations/${lookupSlot}`;
+
+        // Find existing equipment for this slot
+        const existingIndex = modifiedEquipment.findIndex(item =>
+          item.itemLocationHrid === itemLocationHrid
+        );
+
+        const newEquipmentItem = {
+          itemLocationHrid,
+          itemHrid: simSlot.selectedItem,
+          enhancementLevel: simSlot.enhancementLevel
+        };
+
+        if (existingIndex >= 0) {
+          // Replace existing item
+          modifiedEquipment[existingIndex] = newEquipmentItem;
+        } else {
+          // Add new item
+          modifiedEquipment.push(newEquipmentItem);
+        }
+      });
+
+      // Create modified character data
+      const modifiedData = {
+        ...parsedData,
+        player: {
+          ...parsedData.player,
+          equipment: modifiedEquipment
+        }
+      };
+
+      return JSON.stringify(modifiedData);
+    } catch (error) {
+      console.error('Failed to create modified character data:', error);
+      return originalData;
+    }
+  };
+
   // Function to parse raw character data and create equipment display data
   const parseEquipmentData = (): EquipmentItem[] => {
     if (!rawCharacterData) return [];
@@ -649,8 +706,13 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       return targetLevel !== undefined && targetLevel !== currentLevel;
     });
 
+    // Check for additional sim slots (Set another X functionality)
+    const additionalSlotChanges = additionalSimSlots.filter(simSlot => {
+      return simSlot.selectedItem && simSlot.selectedItem !== '';
+    });
+
     // Check if there are any changes to test
-    const hasChanges = slotsToTest.length > 0 || abilityChanges.length > 0 || houseChanges.length > 0;
+    const hasChanges = slotsToTest.length > 0 || abilityChanges.length > 0 || houseChanges.length > 0 || additionalSlotChanges.length > 0;
 
     if (!hasChanges) {
       setError('No changes detected. Please modify enhancement levels, ability levels, or house levels to test.');
@@ -661,6 +723,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
     try {
       console.log(`🔧 Testing changes:`, {
         equipment: `${slotsToTest.length} slots`,
+        additionalItems: `${additionalSlotChanges.length} additional slots`,
         abilities: `${abilityChanges.length} abilities`,
         houses: `${houseChanges.length} rooms`
       });
@@ -674,12 +737,20 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
       console.log(`🎯 Target zone for optimization: ${targetZone} (${ZONE_DISPLAY_NAMES[targetZone]}) - Tier ${targetTier}`);
 
+      // Build selectedLevels including additional sim slots
+      const selectedLevels = { ...displayEnhancementLevels };
+
+      // Add additional sim slots to selectedLevels
+      additionalSlotChanges.forEach(simSlot => {
+        selectedLevels[simSlot.slot] = simSlot.enhancementLevel;
+      });
+
       // Create simplified request - we'll build the test plan on the backend
       const request = {
         optimizeFor,
         targetZone,
         targetTier,
-        selectedLevels: displayEnhancementLevels,
+        selectedLevels,
         abilityTargetLevels,
         houseTargetLevels: houseMaxLevels
       };
@@ -689,15 +760,23 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       console.log(`🎯 Total tests planned: ${totalTests}`);
 
       // Start streaming upgrade analysis with real-time updates
+      // Create modified character data if we have additional sim slots
+      const modifiedCharacterData = additionalSlotChanges.length > 0 && rawCharacterData
+        ? createModifiedCharacterData(rawCharacterData, additionalSimSlots)
+        : rawCharacterData;
+
       console.log('🚀 Starting streaming upgrade analysis...');
       console.log('Character:', character);
       console.log('Request:', request);
       console.log('Raw character data length:', rawCharacterData?.length || 0);
+      if (additionalSlotChanges.length > 0) {
+        console.log('📝 Using modified character data with additional sim slots:', additionalSlotChanges.length);
+      }
 
       await CombatSimulatorApiService.analyzeEquipmentUpgradesStream(
         character,
         request,
-        rawCharacterData || null,
+        modifiedCharacterData || null,
         (event) => {
           console.log('📡 Stream event received:', event.type, event);
 
