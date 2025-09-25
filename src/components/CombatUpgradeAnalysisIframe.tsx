@@ -1882,7 +1882,29 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
                   // Add equipment upgrades
                   Object.entries(equipmentTestResults).forEach(([slot, testResults]) => {
-                    const recommendation = equipmentRecommendations.find((rec: Record<string, unknown>) => rec.slot === slot);
+                    let recommendation = equipmentRecommendations.find((rec: Record<string, unknown>) => rec.slot === slot);
+
+                    // If no recommendation exists, create one from the best test result to show downgrades
+                    if (!recommendation && testResults.length > 0) {
+                      const bestTest = testResults[0]; // Assuming first result is the test result
+                      const profitIncrease = bestTest.profit - (baselineResults?.profitPerDay || 0);
+                      const experienceIncrease = bestTest.exp - (baselineResults?.experienceGain || 0);
+                      const percentageIncrease = baselineResults?.profitPerDay ? (profitIncrease / baselineResults.profitPerDay) * 100 : 0;
+
+                      recommendation = {
+                        slot,
+                        currentEnhancement: 0, // Will be determined from character data
+                        recommendedEnhancement: bestTest.level,
+                        experienceIncrease,
+                        profitIncrease,
+                        percentageIncrease,
+                        enhancementCost: bestTest.enhancementCost,
+                        paybackDays: bestTest.paybackDays,
+                        itemName: bestTest.itemName,
+                        itemHrid: bestTest.itemHrid
+                      };
+                    }
+
                     if (recommendation) {
                       allUpgrades.push({
                         type: 'equipment',
@@ -1896,7 +1918,25 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
                   // Add ability upgrades
                   Object.entries(abilityTestResults).forEach(([abilityHrid, testResults]) => {
-                    const recommendation = abilityRecommendations.find((rec: Record<string, unknown>) => rec.abilityHrid === abilityHrid);
+                    let recommendation = abilityRecommendations.find((rec: Record<string, unknown>) => rec.abilityHrid === abilityHrid);
+
+                    // If no recommendation exists, create one from the test result to show downgrades
+                    if (!recommendation && testResults.length > 0) {
+                      const bestTest = testResults[0];
+                      const profitIncrease = bestTest.profit - (baselineResults?.profitPerDay || 0);
+                      const experienceIncrease = bestTest.exp - (baselineResults?.experienceGain || 0);
+                      const percentageIncrease = baselineResults?.experienceGain ? (experienceIncrease / baselineResults.experienceGain) * 100 : 0;
+
+                      recommendation = {
+                        abilityHrid,
+                        currentLevel: 0, // Will be determined from character data
+                        recommendedLevel: bestTest.level,
+                        experienceIncrease,
+                        profitIncrease,
+                        percentageIncrease
+                      };
+                    }
+
                     if (recommendation) {
                       allUpgrades.push({
                         type: 'ability',
@@ -1910,7 +1950,25 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
                   // Add house upgrades
                   Object.entries(houseTestResults).forEach(([roomHrid, testResults]) => {
-                    const recommendation = houseRecommendations.find((rec: Record<string, unknown>) => rec.roomHrid === roomHrid);
+                    let recommendation = houseRecommendations.find((rec: Record<string, unknown>) => rec.roomHrid === roomHrid);
+
+                    // If no recommendation exists, create one from the test result to show downgrades
+                    if (!recommendation && testResults.length > 0) {
+                      const bestTest = testResults[0];
+                      const profitIncrease = bestTest.profit - (baselineResults?.profitPerDay || 0);
+                      const experienceIncrease = bestTest.exp - (baselineResults?.experienceGain || 0);
+                      const percentageIncrease = baselineResults?.profitPerDay ? (profitIncrease / baselineResults.profitPerDay) * 100 : 0;
+
+                      recommendation = {
+                        roomHrid,
+                        currentLevel: 0, // Will be determined from character data
+                        recommendedLevel: bestTest.level,
+                        experienceIncrease,
+                        profitIncrease,
+                        percentageIncrease
+                      };
+                    }
+
                     if (recommendation) {
                       allUpgrades.push({
                         type: 'house',

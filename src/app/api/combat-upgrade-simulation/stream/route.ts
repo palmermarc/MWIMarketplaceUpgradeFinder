@@ -1420,7 +1420,7 @@ function calculateRecommendations(
       }
     });
 
-    if (bestTest && bestImprovement > 0) {
+    if (bestTest) {
       const experienceIncrease = (bestTest as UpgradeTestResult).experienceGain - baseline.experienceGain;
       const profitIncrease = (bestTest as UpgradeTestResult).profitPerDay - baseline.profitPerDay;
       const percentageIncrease = baselineMetric > 0 ? (bestImprovement / baselineMetric) * 100 : 0;
