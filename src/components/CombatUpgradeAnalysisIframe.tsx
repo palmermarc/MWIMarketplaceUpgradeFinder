@@ -740,9 +740,15 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       // Build selectedLevels including additional sim slots
       const selectedLevels = { ...displayEnhancementLevels };
 
-      // Add additional sim slots to selectedLevels
+      // Build equipment overrides for additional sim slots
+      const equipmentOverrides: { [slot: string]: string } = {};
+
+      // Add additional sim slots to selectedLevels and equipmentOverrides
       additionalSlotChanges.forEach(simSlot => {
         selectedLevels[simSlot.slot] = simSlot.enhancementLevel;
+        if (simSlot.selectedItem) {
+          equipmentOverrides[simSlot.slot] = simSlot.selectedItem;
+        }
       });
 
       // Create simplified request - we'll build the test plan on the backend
@@ -751,6 +757,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
         targetZone,
         targetTier,
         selectedLevels,
+        equipmentOverrides: Object.keys(equipmentOverrides).length > 0 ? equipmentOverrides : undefined,
         abilityTargetLevels,
         houseTargetLevels: houseMaxLevels
       };

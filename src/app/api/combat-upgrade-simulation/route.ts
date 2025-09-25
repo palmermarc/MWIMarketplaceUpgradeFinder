@@ -36,6 +36,8 @@ interface UpgradeSimulationRequest {
   targetTier?: string;
   optimizeFor: 'profit' | 'exp';
   maxEnhancementTiers: number;
+  selectedLevels?: { [slot: string]: number };
+  equipmentOverrides?: { [slot: string]: string }; // For "Set another X" functionality
 }
 
 export async function POST(request: NextRequest) {
@@ -327,6 +329,25 @@ async function updateEnhancementField(page: Page, slot: string, level: number) {
 }
 
 // Helper function to run a single simulation
+async function updateEquipmentSelection(page: Page, slot: string, itemHrid: string) {
+  return await page.evaluate((slot, itemHrid) => {
+    const equipmentSelectId = `#selectEquipment_${slot}`;
+    const equipmentSelect = document.querySelector(equipmentSelectId) as HTMLSelectElement;
+
+    if (equipmentSelect) {
+      console.log(`🔄 Setting equipment for ${slot} to: ${itemHrid}`);
+      equipmentSelect.value = itemHrid;
+      equipmentSelect.dispatchEvent(new Event('input', { bubbles: true }));
+      equipmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      equipmentSelect.dispatchEvent(new Event('blur', { bubbles: true }));
+      return true;
+    } else {
+      console.log(`❌ Equipment selector not found: ${equipmentSelectId}`);
+    }
+    return false;
+  }, slot, itemHrid);
+}
+
 async function runSingleSimulation(page: Page, targetZone: string, targetTier?: string) {
   // Configure simulation settings
   await page.evaluate((targetZone, targetTier) => {

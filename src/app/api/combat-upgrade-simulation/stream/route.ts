@@ -61,6 +61,7 @@ interface UpgradeSimulationRequest {
   targetTier?: string;
   optimizeFor: 'profit' | 'exp';
   selectedLevels: { [slot: string]: number };
+  equipmentOverrides?: { [slot: string]: string }; // For "Set another X" functionality
   abilityTargetLevels?: { [abilityHrid: string]: number };
   houseTargetLevels?: { [roomHrid: string]: number };
 }
@@ -274,7 +275,7 @@ async function launchBrowserForEnvironment() {
 }
 
 export async function POST(request: NextRequest) {
-  const { character, rawCharacterData, targetZone, targetTier, optimizeFor, selectedLevels, abilityTargetLevels, houseTargetLevels }: UpgradeSimulationRequest = await request.json();
+  const { character, rawCharacterData, targetZone, targetTier, optimizeFor, selectedLevels, equipmentOverrides, abilityTargetLevels, houseTargetLevels }: UpgradeSimulationRequest = await request.json();
 
   // Create a readable stream for Server-Sent Events
   const encoder = new TextEncoder();
@@ -520,6 +521,14 @@ export async function POST(request: NextRequest) {
               })}\n\n`));
 
               try {
+                // Set equipment item if there's an override for this slot
+                if (equipmentOverrides && equipmentOverrides[plan.slot]) {
+                  console.log(`🔄 Setting equipment override for ${plan.slot}: ${equipmentOverrides[plan.slot]}`);
+                  await updateEquipmentSelection(page, plan.slot, equipmentOverrides[plan.slot]);
+                  // Wait a moment for the equipment change to register
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
                 // Update enhancement level field
                 await updateEnhancementField(page, plan.slot, testLevel);
 
@@ -573,6 +582,13 @@ export async function POST(request: NextRequest) {
 
                 // Reset enhancement level for next test
                 await updateEnhancementField(page, plan.slot, plan.currentLevel);
+
+                // Reset equipment item if there was an override
+                if (equipmentOverrides && equipmentOverrides[plan.slot]) {
+                  console.log(`🔄 Resetting equipment for ${plan.slot} back to original: ${plan.itemHrid}`);
+                  await updateEquipmentSelection(page, plan.slot, plan.itemHrid);
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
 
               } catch (error) {
                 console.error(`❌ Failed to test ${plan.slot} +${testLevel}:`, error);
@@ -1043,6 +1059,25 @@ async function updateEnhancementField(page: Page, slot: string, level: number) {
     }
     return false;
   }, slot, level);
+}
+
+async function updateEquipmentSelection(page: Page, slot: string, itemHrid: string) {
+  return await page.evaluate((slot, itemHrid) => {
+    const equipmentSelectId = `#selectEquipment_${slot}`;
+    const equipmentSelect = document.querySelector(equipmentSelectId) as HTMLSelectElement;
+
+    if (equipmentSelect) {
+      console.log(`🔄 Setting equipment for ${slot} to: ${itemHrid}`);
+      equipmentSelect.value = itemHrid;
+      equipmentSelect.dispatchEvent(new Event('input', { bubbles: true }));
+      equipmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      equipmentSelect.dispatchEvent(new Event('blur', { bubbles: true }));
+      return true;
+    } else {
+      console.log(`❌ Equipment selector not found: ${equipmentSelectId}`);
+    }
+    return false;
+  }, slot, itemHrid);
 }
 
 async function setAbilityLevels(page: Page, character: CharacterStats, abilityTargetLevels?: { [abilityHrid: string]: number }, testOnlyAbilityHrid?: string) {
