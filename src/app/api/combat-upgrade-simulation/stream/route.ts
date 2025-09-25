@@ -393,6 +393,13 @@ export async function POST(request: NextRequest) {
           });
         }
 
+        // Add equipment override tests to total count
+        if (equipmentOverrides && Object.keys(equipmentOverrides).length > 0) {
+          const overrideCount = Object.keys(equipmentOverrides).length;
+          totalSimulations += overrideCount;
+          console.log(`🔧 Equipment overrides: ${overrideCount} tests`);
+        }
+
         // Send equipment info
         safeEnqueue({
           type: 'equipment_info',
@@ -521,63 +528,8 @@ export async function POST(request: NextRequest) {
               })}\n\n`));
 
               try {
-                // Set equipment item if there's an override for this slot
-                if (equipmentOverrides && equipmentOverrides[plan.slot]) {
-                  console.log(`🔄 Testing with equipment override for ${plan.slot}: ${equipmentOverrides[plan.slot]}`);
-
-                  // Create modified character data with the new item
-                  if (rawCharacterData) {
-                    try {
-                      const parsedData = JSON.parse(rawCharacterData);
-                      const equipmentArray = parsedData.player?.equipment || [];
-
-                      // Map the slot name for the equipment location
-                      const lookupSlot = plan.slot === 'weapon' ? 'main_hand' : plan.slot;
-                      const itemLocationHrid = `/item_locations/${lookupSlot}`;
-
-                      // Create a copy of the equipment array
-                      const modifiedEquipment = equipmentArray.map((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => {
-                        if (item.itemLocationHrid === itemLocationHrid) {
-                          return {
-                            ...item,
-                            itemHrid: equipmentOverrides[plan.slot],
-                            enhancementLevel: testLevel
-                          };
-                        }
-                        return item;
-                      });
-
-                      // If item doesn't exist, add it
-                      if (!modifiedEquipment.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => item.itemLocationHrid === itemLocationHrid)) {
-                        modifiedEquipment.push({
-                          itemLocationHrid,
-                          itemHrid: equipmentOverrides[plan.slot],
-                          enhancementLevel: testLevel
-                        });
-                      }
-
-                      const modifiedCharacterData = JSON.stringify({
-                        ...parsedData,
-                        player: {
-                          ...parsedData.player,
-                          equipment: modifiedEquipment
-                        }
-                      });
-
-                      console.log(`📝 Re-importing character data with new equipment for test`);
-                      await importCharacterData(page, modifiedCharacterData);
-                    } catch (error) {
-                      console.error('❌ Failed to create modified character data:', error);
-                    }
-                  } else {
-                    // Fallback to the old method if no raw character data
-                    await updateEquipmentSelection(page, plan.slot, equipmentOverrides[plan.slot]);
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                  }
-                } else {
-                  // Update enhancement level field for regular tests
-                  await updateEnhancementField(page, plan.slot, testLevel);
-                }
+                // Update enhancement level field for regular equipment tests
+                await updateEnhancementField(page, plan.slot, testLevel);
 
                 // Run simulation (abilities stay at baseline for equipment tests)
                 const testResult = await runSingleSimulation(page, targetZone, targetTier);
@@ -627,14 +579,8 @@ export async function POST(request: NextRequest) {
                   paybackDays: paybackDays === Infinity ? undefined : paybackDays
                 });
 
-                // Reset to baseline character data if we used an equipment override
-                if (equipmentOverrides && equipmentOverrides[plan.slot] && rawCharacterData) {
-                  console.log(`🔄 Resetting to baseline character data after equipment override test`);
-                  await importCharacterData(page, rawCharacterData);
-                } else {
-                  // Reset enhancement level for regular tests
-                  await updateEnhancementField(page, plan.slot, plan.currentLevel);
-                }
+                // Reset enhancement level for next test
+                await updateEnhancementField(page, plan.slot, plan.currentLevel);
 
               } catch (error) {
                 console.error(`❌ Failed to test ${plan.slot} +${testLevel}:`, error);
@@ -655,6 +601,146 @@ export async function POST(request: NextRequest) {
                 safeEnqueue({
                   type: 'test_failed',
                   result: failedTest,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  progress,
+                  simulationCount,
+                  totalSimulations
+                });
+              }
+
+              simulationCount++;
+            }
+          }
+
+          // Test each equipment override individually (from "Set another X" functionality)
+          if (equipmentOverrides && Object.keys(equipmentOverrides).length > 0) {
+            for (const [slot, itemHrid] of Object.entries(equipmentOverrides)) {
+              const enhancementLevel = selectedLevels[slot] || 0;
+              const progress = 20 + ((simulationCount / totalSimulations) * 75);
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'test_starting',
+                slot: `equipment_override_${slot}`,
+                testLevel: enhancementLevel,
+                currentLevel: 0, // Override tests are independent
+                itemHrid,
+                progress,
+                simulationCount,
+                totalSimulations
+              })}\n\n`));
+
+              try {
+                // Create modified character data with the new item
+                if (rawCharacterData) {
+                  const parsedData = JSON.parse(rawCharacterData);
+                  const equipmentArray = parsedData.player?.equipment || [];
+
+                  // Map the slot name for the equipment location
+                  const lookupSlot = slot === 'weapon' ? 'main_hand' : slot;
+                  const itemLocationHrid = `/item_locations/${lookupSlot}`;
+
+                  // Create a copy of the equipment array
+                  const modifiedEquipment = equipmentArray.map((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => {
+                    if (item.itemLocationHrid === itemLocationHrid) {
+                      return {
+                        ...item,
+                        itemHrid: itemHrid,
+                        enhancementLevel: enhancementLevel
+                      };
+                    }
+                    return item;
+                  });
+
+                  // If item doesn't exist, add it
+                  if (!modifiedEquipment.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => item.itemLocationHrid === itemLocationHrid)) {
+                    modifiedEquipment.push({
+                      itemLocationHrid,
+                      itemHrid: itemHrid,
+                      enhancementLevel: enhancementLevel
+                    });
+                  }
+
+                  const modifiedCharacterData = JSON.stringify({
+                    ...parsedData,
+                    player: {
+                      ...parsedData.player,
+                      equipment: modifiedEquipment
+                    }
+                  });
+
+                  console.log(`📝 Testing equipment override: ${slot} with ${itemHrid} at level ${enhancementLevel}`);
+                  await importCharacterData(page, modifiedCharacterData);
+
+                  // Run simulation with the equipment override
+                  const testResult = await runSingleSimulation(page, targetZone, targetTier);
+
+                  const profitIncreasePerDay = testResult.profitPerDay - baselineResults.profitPerDay;
+                  const expIncreasePerHour = testResult.experienceGain - baselineResults.experienceGain;
+
+                  // Calculate enhancement cost for the new item (assuming from level 0)
+                  const enhancementCost = await calculateEnhancementCost(0, enhancementLevel, itemHrid);
+                  const paybackDays = enhancementCost > 0 && profitIncreasePerDay > 0 ? Math.ceil(enhancementCost / profitIncreasePerDay) : (enhancementCost > 0 ? Infinity : 0);
+
+                  console.log(`🔧 Equipment Override Test for ${slot} (${itemHrid} +${enhancementLevel}):`);
+                  console.log(`  - Baseline Experience Per Hour: ${baselineResults.experienceGain.toLocaleString()}`);
+                  console.log(`  - Test Result Experience Per Hour: ${testResult.experienceGain.toLocaleString()}`);
+                  console.log(`  - Experience Increase Per Hour: ${expIncreasePerHour.toLocaleString()}`);
+                  console.log(`  - Baseline Profit Per Day: ${baselineResults.profitPerDay.toLocaleString()}`);
+                  console.log(`  - Test Result Profit Per Day: ${testResult.profitPerDay.toLocaleString()}`);
+                  console.log(`  - Profit Increase Per Day: ${profitIncreasePerDay.toLocaleString()}`);
+                  console.log(`  - Enhancement Cost: ${enhancementCost.toLocaleString()}`);
+                  console.log(`  - Payback Days: ${paybackDays === Infinity ? 'Never' : paybackDays}`);
+
+                  const equipmentOverrideTest: UpgradeTestResult = {
+                    slot: `equipment_override_${slot}`,
+                    currentEnhancement: 0, // Override tests are independent
+                    testEnhancement: enhancementLevel,
+                    experienceGain: testResult.experienceGain,
+                    profitPerDay: testResult.profitPerDay,
+                    success: true,
+                    enhancementCost,
+                    profitIncrease: profitIncreasePerDay,
+                    paybackDays: paybackDays === Infinity ? undefined : paybackDays,
+                    itemName: itemHrid.replace('/items/', ''),
+                    itemHrid: itemHrid
+                  };
+
+                  upgradeTests.push(equipmentOverrideTest);
+
+                  // Send individual test result immediately
+                  safeEnqueue({
+                    type: 'test_complete',
+                    result: equipmentOverrideTest,
+                    progress,
+                    simulationCount,
+                    totalSimulations
+                  });
+
+                  // Reset to baseline character data after each test
+                  console.log(`🔄 Resetting to baseline character data after equipment override test`);
+                  await importCharacterData(page, rawCharacterData);
+
+                } else {
+                  console.error(`❌ No raw character data available for equipment override test: ${slot}`);
+                }
+
+              } catch (error) {
+                console.error(`❌ Failed to test equipment override ${slot}:`, error);
+
+                const failedEquipmentOverrideTest: UpgradeTestResult = {
+                  slot: `equipment_override_${slot}`,
+                  currentEnhancement: 0,
+                  testEnhancement: enhancementLevel,
+                  experienceGain: 0,
+                  profitPerDay: 0,
+                  success: false
+                };
+
+                upgradeTests.push(failedEquipmentOverrideTest);
+
+                safeEnqueue({
+                  type: 'test_failed',
+                  result: failedEquipmentOverrideTest,
                   error: error instanceof Error ? error.message : 'Unknown error',
                   progress,
                   simulationCount,
