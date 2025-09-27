@@ -1468,12 +1468,13 @@ async function runSingleSimulation(page: Page, targetZone: string, targetTier?: 
     }
   });
 
-  // Wait for simulation to complete (longer for local debugging)
-  const simulationWaitTime = isLocal ? 7000 : 5000;  // Reduced from 15000/10000ms to 7000/5000ms
-  console.log(`⏱️ Waiting ${simulationWaitTime}ms for simulation to complete...`);
-  await new Promise(resolve => setTimeout(resolve, simulationWaitTime));
+  // Wait for simulation to complete with smart retry logic
+  const initialWaitTime = isLocal ? 7000 : 5000;
+  console.log(`⏱️ Waiting ${initialWaitTime}ms for simulation to complete...`);
+  await new Promise(resolve => setTimeout(resolve, initialWaitTime));
 
-  return await page.evaluate(() => {
+  // Extract results and validate
+  let results = await page.evaluate(() => {
     const expElement = document.querySelector('#simulationResultExperienceGain .row div.text-end');
     const experienceGain = expElement ? parseFloat(expElement.textContent?.replace(/,/g, '') || '0') : 0;
 
@@ -1496,6 +1497,45 @@ async function runSingleSimulation(page: Page, targetZone: string, targetTier?: 
       profitPerDay
     };
   });
+
+  // If results are empty/invalid, wait longer and retry (mainly for production)
+  if (results.experienceGain === 0 && results.profitPerDay === 0) {
+    console.log('⚠️ Simulation results not ready, waiting additional 7 seconds and retrying...');
+    await new Promise(resolve => setTimeout(resolve, 7000));
+
+    results = await page.evaluate(() => {
+      const expElement = document.querySelector('#simulationResultExperienceGain .row div.text-end');
+      const experienceGain = expElement ? parseFloat(expElement.textContent?.replace(/,/g, '') || '0') : 0;
+
+      const profitElement = document.querySelector('#noRngProfitPreview');
+      const profitPerDay = profitElement ? parseFloat(profitElement.textContent?.replace(/,/g, '') || '0') : 0;
+
+      console.log('🔄 RETRY - Experience Data Fields:');
+      console.log('  - Element:', expElement);
+      console.log('  - Raw Text Content:', expElement?.textContent);
+      console.log('  - Parsed Experience Gain:', experienceGain);
+
+      console.log('🔄 RETRY - Profit Data Fields:');
+      console.log('  - Element:', profitElement);
+      console.log('  - Raw Text Content:', profitElement?.textContent);
+      console.log('  - Parsed Profit Per Day:', profitPerDay);
+
+      return {
+        experienceGain,
+        profitPerDay
+      };
+    });
+
+    if (results.experienceGain === 0 && results.profitPerDay === 0) {
+      console.log('❌ Simulation results still not available after retry');
+    } else {
+      console.log('✅ Simulation results successfully retrieved on retry');
+    }
+  } else {
+    console.log('✅ Simulation results ready on first attempt');
+  }
+
+  return results;
 }
 
 function calculateRecommendations(
