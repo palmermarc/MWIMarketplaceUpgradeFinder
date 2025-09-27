@@ -45,6 +45,11 @@ export class MarketplaceService {
   }
 
   private static getStoredData(): { data: MarketData | null; timestamp: number | null } {
+    // Check if we're running on the server (no localStorage)
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return { data: null, timestamp: null };
+    }
+
     try {
       const storedData = localStorage.getItem(STORAGE_KEY);
       const storedTimestamp = localStorage.getItem(TIMESTAMP_KEY);
@@ -60,6 +65,11 @@ export class MarketplaceService {
   }
 
   private static storeData(data: MarketData, timestamp: number): void {
+    // Check if we're running on the server (no localStorage)
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return; // Skip storing on server-side
+    }
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(TIMESTAMP_KEY, timestamp.toString());

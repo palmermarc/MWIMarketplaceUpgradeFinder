@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MarketData, AuctionItem, ItemAnalysis, UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
 import { CombatSlotItems } from '@/constants/combatItems';
@@ -23,12 +23,6 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
   const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
   const [showQuickUpgrades, setShowQuickUpgrades] = useState(false);
 
-  useEffect(() => {
-    if (marketData && character) {
-      analyzeMarket(marketData);
-      findUpgradeOpportunities(marketData, character);
-    }
-  }, [marketData, character]);
 
 
   const analyzeMarket = (data: MarketData) => {
@@ -71,7 +65,7 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
     setAnalysis(analysisResults);
   };
 
-  const findUpgradeOpportunities = (data: MarketData, char: CharacterStats) => {
+  const findUpgradeOpportunities = useCallback((data: MarketData, char: CharacterStats) => {
     const opportunities: UpgradeOpportunity[] = [];
 
     Object.entries(char.equipment).forEach(([slot, equipment]) => {
@@ -150,7 +144,15 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
     if (onUpgradesFound) {
       onUpgradesFound(upgradeOpportunities);
     }
-  };
+  }, [onUpgradesFound]);
+
+  // Effect to run analysis when data changes
+  useEffect(() => {
+    if (marketData && character) {
+      analyzeMarket(marketData);
+      findUpgradeOpportunities(marketData, character);
+    }
+  }, [marketData, character, findUpgradeOpportunities]);
 
   const toggleVariants = (index: number) => {
     const newExpanded = new Set(expandedVariants);

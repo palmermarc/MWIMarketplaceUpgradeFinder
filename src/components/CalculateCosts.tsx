@@ -235,7 +235,7 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
     });
 
     return upgrades;
-  }, [abilityLevels, marketData]);
+  }, [abilityLevels, marketData, getMarketplaceData]);
 
   // Calculate house material costs when house upgrades or marketplace data changes
   useEffect(() => {

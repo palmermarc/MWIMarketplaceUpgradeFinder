@@ -99,7 +99,6 @@ npm start
 
 ## API Endpoints
 
-- `GET/POST /api/combat-simulation` - Run combat simulations
 - `GET/POST /api/combat-upgrade-simulation` - Analyze equipment upgrades
 - `GET /api/combat-upgrade-simulation/stream` - Streaming upgrade analysis
 - `GET /api/inspect-simulator` - Inspect simulator state
@@ -111,9 +110,9 @@ npm start
 src/
 ├── app/
 │   ├── api/                    # API routes
-│   │   ├── combat-simulation/
 │   │   ├── combat-upgrade-simulation/
-│   │   └── inspect-simulator/
+│   │   ├── inspect-simulator/
+│   │   └── test-puppeteer/
 │   ├── page.tsx               # Main page
 │   └── layout.tsx             # Root layout
 ├── components/

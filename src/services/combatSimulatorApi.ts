@@ -5,6 +5,7 @@ export interface UpgradeAnalysisRequest {
   targetZone: string;
   targetTier?: string;
   selectedLevels: { [slot: string]: number };
+  equipmentOverrides?: { [slot: string]: string }; // For "Set another X" functionality
   abilityTargetLevels?: { [abilityHrid: string]: number };
   houseTargetLevels?: { [roomHrid: string]: number };
 }
@@ -40,9 +41,6 @@ export interface StreamEvent {
   baselineResults?: {
     experienceGain: number;
     profitPerDay: number;
-  };
-  combatSlotItems?: {
-    [slot: string]: Array<{ itemHrid: string; itemName: string; }>;
   };
   upgradeTests?: {
     slot: string;
@@ -138,6 +136,7 @@ export class CombatSimulatorApiService {
           targetTier: request.targetTier,
           optimizeFor: request.optimizeFor,
           selectedLevels: request.selectedLevels,
+          equipmentOverrides: request.equipmentOverrides,
           abilityTargetLevels: request.abilityTargetLevels,
           houseTargetLevels: request.houseTargetLevels
         }),

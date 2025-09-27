@@ -11,6 +11,9 @@ import { MarketplaceService } from '@/services/marketplace';
 import { combatSimulationStorage, SavedCombatSimulation } from '@/services/combatSimulationStorage';
 import { useTheme } from '@/contexts/ThemeContext';
 
+// Equipment slots to test - defined as constant outside component
+const EQUIPMENT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
+
 interface CombatUpgradeAnalysisProps {
   character: CharacterStats;
   rawCharacterData?: string | null;
@@ -162,9 +165,6 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
   const [selectedCombatTier, setSelectedCombatTier] = useState<string>('0');
   const [abilityTargetLevels, setAbilityTargetLevels] = useState<{ [abilityHrid: string]: number }>({});
 
-  // Equipment slots to test
-  const EQUIPMENT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
-
   // Initialize display enhancement levels when combat items are loaded
   useEffect(() => {
     if (Object.keys(displayEnhancementLevels).length === 0) {
@@ -215,13 +215,6 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
     }
   }, [character.abilities, abilityTargetLevels]);
 
-  // Initialize equipment testing data when rawCharacterData is available
-  useEffect(() => {
-    if (rawCharacterData && equipmentTestingData.length === 0) {
-      const equipmentData = parseEquipmentData();
-      setEquipmentTestingData(equipmentData);
-    }
-  }, [rawCharacterData, equipmentTestingData.length]);
 
   // Function to parse house name from roomHrid
   const parseHouseName = (roomHrid: string): string => {
@@ -328,7 +321,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
 
   // Function to parse raw character data and create equipment display data
-  const parseEquipmentData = (): EquipmentItem[] => {
+  const parseEquipmentData = useCallback((): EquipmentItem[] => {
     if (!rawCharacterData) return [];
 
     try {
@@ -392,7 +385,15 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       console.error('Failed to parse character data:', error);
       return [];
     }
-  };
+  }, [rawCharacterData]);
+
+  // Initialize equipment testing data when rawCharacterData is available
+  useEffect(() => {
+    if (rawCharacterData && equipmentTestingData.length === 0) {
+      const equipmentData = parseEquipmentData();
+      setEquipmentTestingData(equipmentData);
+    }
+  }, [rawCharacterData, equipmentTestingData.length, parseEquipmentData]);
 
   // runCombatAnalysis function removed - everything now goes through handleFindUpgrades
 

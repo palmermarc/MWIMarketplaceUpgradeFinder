@@ -269,7 +269,7 @@ async function launchBrowserForEnvironment() {
     console.log('☁️ PRODUCTION MODE: Launching Vercel-compatible browser...');
     console.log(`   Reason: isLocal=${isLocal}, puppeteer=${!!puppeteer}`);
     return await launchBrowser({
-      timeout: 60000
+      timeout: 30000  // Reduced from 60000ms (60s) to 30000ms (30s)
     });
   }
 }
@@ -428,7 +428,7 @@ export async function POST(request: NextRequest) {
           try {
             console.log('📸 Taking test screenshot to verify browser visibility...');
             await page.goto('data:text/html,<h1>Test - Browser is working!</h1>');
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second pause
+            // await new Promise(resolve => setTimeout(resolve, 2000)); // COMMENTED: 2 second pause - testing removal
             console.log('✅ Browser should be visible now with test page');
           } catch (error) {
             console.log('❌ Browser visibility test failed:', error);
@@ -451,13 +451,13 @@ export async function POST(request: NextRequest) {
 
           await page.goto('https://shykai.github.io/MWICombatSimulatorTest/dist/', {
             waitUntil: 'networkidle2',
-            timeout: 90000
+            timeout: 45000  // Reduced from 90000ms (90s) to 45000ms (45s)
           });
 
           if (isLocal) {
             console.log('✅ LOCAL DEBUG: Combat simulator loaded successfully');
             console.log('⏸️ LOCAL DEBUG: Taking a pause to let you see the page...');
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // await new Promise(resolve => setTimeout(resolve, 3000)); // COMMENTED: 3s debug pause - testing removal
           }
 
           // Load marketplace prices first
@@ -474,7 +474,7 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // await new Promise(resolve => setTimeout(resolve, 3000)); // COMMENTED: 3s wait after marketplace prices - testing removal
 
           // Import character data
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -485,28 +485,18 @@ export async function POST(request: NextRequest) {
 
           await importCharacterData(page, rawCharacterData || JSON.stringify(character));
 
-          // Extract total items for each combat slot after character import
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-            type: 'status',
-            message: 'Reading total items for each combat slot...',
-            progress: 17
-          })}\n\n`));
-
-          const combatSlotItems = await extractCombatSlotItems(page);
-
           // Run baseline simulation
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'status',
             message: 'Running baseline simulation...',
-            progress: 20
+            progress: 17
           })}\n\n`));
 
           const baselineResults = await runSingleSimulation(page, targetZone, targetTier);
 
           safeEnqueue({
             type: 'baseline_complete',
-            baselineResults: baselineResults,
-            combatSlotItems: combatSlotItems
+            baselineResults: baselineResults
           });
 
           const upgradeTests: UpgradeTestResult[] = [];
@@ -630,99 +620,91 @@ export async function POST(request: NextRequest) {
               })}\n\n`));
 
               try {
-                // Create modified character data with the new item
-                if (rawCharacterData) {
-                  const parsedData = JSON.parse(rawCharacterData);
-                  const equipmentArray = parsedData.player?.equipment || [];
-
-                  // Map the slot name for the equipment location
-                  const lookupSlot = slot === 'weapon' ? 'main_hand' : slot;
-                  const itemLocationHrid = `/item_locations/${lookupSlot}`;
-
-                  // Create a copy of the equipment array
-                  const modifiedEquipment = equipmentArray.map((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => {
-                    if (item.itemLocationHrid === itemLocationHrid) {
-                      return {
-                        ...item,
-                        itemHrid: itemHrid,
-                        enhancementLevel: enhancementLevel
-                      };
-                    }
-                    return item;
-                  });
-
-                  // If item doesn't exist, add it
-                  if (!modifiedEquipment.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) => item.itemLocationHrid === itemLocationHrid)) {
-                    modifiedEquipment.push({
-                      itemLocationHrid,
-                      itemHrid: itemHrid,
-                      enhancementLevel: enhancementLevel
-                    });
-                  }
-
-                  const modifiedCharacterData = JSON.stringify({
-                    ...parsedData,
-                    player: {
-                      ...parsedData.player,
-                      equipment: modifiedEquipment
-                    }
-                  });
-
-                  console.log(`📝 Testing equipment override: ${slot} with ${itemHrid} at level ${enhancementLevel}`);
-                  await importCharacterData(page, modifiedCharacterData);
-
-                  // Run simulation with the equipment override
-                  const testResult = await runSingleSimulation(page, targetZone, targetTier);
-
-                  const profitIncreasePerDay = testResult.profitPerDay - baselineResults.profitPerDay;
-                  const expIncreasePerHour = testResult.experienceGain - baselineResults.experienceGain;
-
-                  // Calculate enhancement cost for the new item (assuming from level 0)
-                  const enhancementCost = await calculateEnhancementCost(0, enhancementLevel, itemHrid);
-                  const paybackDays = enhancementCost > 0 && profitIncreasePerDay > 0 ? Math.ceil(enhancementCost / profitIncreasePerDay) : (enhancementCost > 0 ? Infinity : 0);
-
-                  console.log(`🔧 Equipment Override Test for ${slot} (${itemHrid} +${enhancementLevel}):`);
-                  console.log(`  - Baseline Experience Per Hour: ${baselineResults.experienceGain.toLocaleString()}`);
-                  console.log(`  - Test Result Experience Per Hour: ${testResult.experienceGain.toLocaleString()}`);
-                  console.log(`  - Experience Increase Per Hour: ${expIncreasePerHour.toLocaleString()}`);
-                  console.log(`  - Baseline Profit Per Day: ${baselineResults.profitPerDay.toLocaleString()}`);
-                  console.log(`  - Test Result Profit Per Day: ${testResult.profitPerDay.toLocaleString()}`);
-                  console.log(`  - Profit Increase Per Day: ${profitIncreasePerDay.toLocaleString()}`);
-                  console.log(`  - Enhancement Cost: ${enhancementCost.toLocaleString()}`);
-                  console.log(`  - Payback Days: ${paybackDays === Infinity ? 'Never' : paybackDays}`);
-
-                  const equipmentOverrideTest: UpgradeTestResult = {
-                    slot: `equipment_override_${slot}`,
-                    currentEnhancement: 0, // Override tests are independent
-                    testEnhancement: enhancementLevel,
-                    experienceGain: testResult.experienceGain,
-                    profitPerDay: testResult.profitPerDay,
-                    success: true,
-                    enhancementCost,
-                    profitIncrease: profitIncreasePerDay,
-                    paybackDays: paybackDays === Infinity ? undefined : paybackDays,
-                    itemName: itemHrid.replace('/items/', ''),
-                    itemHrid: itemHrid
-                  };
-
-                  upgradeTests.push(equipmentOverrideTest);
-
-                  // Send individual test result immediately
-                  safeEnqueue({
-                    type: 'test_complete',
-                    result: equipmentOverrideTest,
-                    progress,
-                    simulationCount,
-                    totalSimulations
-                  });
-
-                  // Reset to baseline character data after each test
-                  console.log(`🔄 Resetting to baseline character data after equipment override test`);
-                  await importCharacterData(page, rawCharacterData);
-
-                } else {
+                if (!rawCharacterData) {
                   console.error(`❌ No raw character data available for equipment override test: ${slot}`);
+                  throw new Error('No raw character data available');
                 }
+
+                console.log(`📝 Testing equipment override: ${slot} with ${itemHrid} at level ${enhancementLevel}`);
+
+                // Set the equipment dropdown to the override item
+                console.log(`🔄 Setting equipment dropdown for ${slot} to: ${itemHrid}`);
+                await updateEquipmentSelection(page, slot, itemHrid);
+
+                // Set the enhancement level
+                await updateEnhancementField(page, slot, enhancementLevel);
+
+                // Wait for changes to register
+                // await new Promise(resolve => setTimeout(resolve, 1500)); // COMMENTED: 1.5s wait for equipment changes - testing removal
+
+                // Run simulation with the equipment override
+                const testResult = await runSingleSimulation(page, targetZone, targetTier);
+
+                const profitIncreasePerDay = testResult.profitPerDay - baselineResults.profitPerDay;
+                const expIncreasePerHour = testResult.experienceGain - baselineResults.experienceGain;
+
+                // Calculate enhancement cost for the new item (assuming from level 0)
+                const enhancementCost = await calculateEnhancementCost(0, enhancementLevel, itemHrid);
+                const paybackDays = enhancementCost > 0 && profitIncreasePerDay > 0 ? Math.ceil(enhancementCost / profitIncreasePerDay) : (enhancementCost > 0 ? Infinity : 0);
+
+                console.log(`🔧 Equipment Override Test for ${slot} (${itemHrid} +${enhancementLevel}):`);
+                console.log(`  - Baseline Experience Per Hour: ${baselineResults.experienceGain.toLocaleString()}`);
+                console.log(`  - Test Result Experience Per Hour: ${testResult.experienceGain.toLocaleString()}`);
+                console.log(`  - Experience Increase Per Hour: ${expIncreasePerHour.toLocaleString()}`);
+                console.log(`  - Baseline Profit Per Day: ${baselineResults.profitPerDay.toLocaleString()}`);
+                console.log(`  - Test Result Profit Per Day: ${testResult.profitPerDay.toLocaleString()}`);
+                console.log(`  - Profit Increase Per Day: ${profitIncreasePerDay.toLocaleString()}`);
+                console.log(`  - Enhancement Cost: ${enhancementCost.toLocaleString()}`);
+                console.log(`  - Payback Days: ${paybackDays === Infinity ? 'Never' : paybackDays}`);
+
+                const equipmentOverrideTest: UpgradeTestResult = {
+                  slot: `equipment_override_${slot}`,
+                  currentEnhancement: 0, // Override tests are independent
+                  testEnhancement: enhancementLevel,
+                  experienceGain: testResult.experienceGain,
+                  profitPerDay: testResult.profitPerDay,
+                  success: true,
+                  enhancementCost,
+                  profitIncrease: profitIncreasePerDay,
+                  paybackDays: paybackDays === Infinity ? undefined : paybackDays,
+                  itemName: itemHrid.replace('/items/', ''),
+                  itemHrid: itemHrid
+                };
+
+                upgradeTests.push(equipmentOverrideTest);
+
+                // Send individual test result immediately
+                safeEnqueue({
+                  type: 'test_complete',
+                  result: equipmentOverrideTest,
+                  progress,
+                  simulationCount,
+                  totalSimulations
+                });
+
+                // Reset equipment dropdown and enhancement level to baseline
+                console.log(`🔄 Resetting ${slot} to baseline after equipment override test`);
+
+                // First, determine what the original item was for this slot
+                const parsedOriginalData = JSON.parse(rawCharacterData);
+                const originalEquipmentArray = parsedOriginalData.player?.equipment || [];
+                const lookupSlotForReset = slot === 'weapon' ? 'main_hand' : slot;
+                const originalItemLocationHrid = `/item_locations/${lookupSlotForReset}`;
+                const originalItem = originalEquipmentArray.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) =>
+                  item.itemLocationHrid === originalItemLocationHrid
+                );
+
+                if (originalItem) {
+                  // Reset to original item and enhancement level
+                  await updateEquipmentSelection(page, slot, originalItem.itemHrid);
+                  await updateEnhancementField(page, slot, originalItem.enhancementLevel);
+                } else {
+                  // No original item, reset to empty
+                  await updateEquipmentSelection(page, slot, '');
+                  await updateEnhancementField(page, slot, 0);
+                }
+
+                // await new Promise(resolve => setTimeout(resolve, 500)); // COMMENTED: 500ms wait after reset - testing removal
 
               } catch (error) {
                 console.error(`❌ Failed to test equipment override ${slot}:`, error);
@@ -1102,7 +1084,7 @@ async function importCharacterData(page: Page, characterData: string) {
     }
   });
 
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // await new Promise(resolve => setTimeout(resolve, 2000)); // COMMENTED: 2s wait after import modal opened - testing removal
 
   await page.evaluate(() => {
     const soloTab = document.querySelector('#solo-tab') as HTMLElement;
@@ -1111,7 +1093,7 @@ async function importCharacterData(page: Page, characterData: string) {
     }
   });
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // await new Promise(resolve => setTimeout(resolve, 1000)); // COMMENTED: 1s wait after solo tab click - testing removal
 
   await page.evaluate((importData) => {
     const soloInput = document.querySelector('#inputSetSolo') as HTMLInputElement;
@@ -1125,7 +1107,7 @@ async function importCharacterData(page: Page, characterData: string) {
     }
   }, characterData);
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // await new Promise(resolve => setTimeout(resolve, 1000)); // COMMENTED: 1s wait after data pasted - testing removal
 
   await page.evaluate(() => {
     const importButton = document.querySelector('#buttonImportSet') as HTMLElement;
@@ -1134,7 +1116,7 @@ async function importCharacterData(page: Page, characterData: string) {
     }
   });
 
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // await new Promise(resolve => setTimeout(resolve, 2000)); // COMMENTED: 2s wait after import button clicked - testing removal
 
   await page.evaluate(() => {
     console.log('🔒 Closing import/export modal...');
@@ -1174,7 +1156,7 @@ async function importCharacterData(page: Page, characterData: string) {
         return { success: true };
   });
 
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // await new Promise(resolve => setTimeout(resolve, 2000)); // COMMENTED: 2s wait after modal closed - testing removal
 }
 
 async function updateEnhancementField(page: Page, slot: string, level: number) {
@@ -1194,38 +1176,100 @@ async function updateEnhancementField(page: Page, slot: string, level: number) {
 }
 
 async function updateEquipmentSelection(page: Page, slot: string, itemHrid: string) {
-  return await page.evaluate((slot, itemHrid) => {
+  console.log(`🔄 Node.js: Attempting to set equipment for ${slot} to: ${itemHrid}`);
+
+  const result = await page.evaluate((slot, itemHrid) => {
     const equipmentSelectId = `#selectEquipment_${slot}`;
     const equipmentSelect = document.querySelector(equipmentSelectId) as HTMLSelectElement;
 
-    if (equipmentSelect) {
-      console.log(`🔄 Setting equipment for ${slot} to: ${itemHrid}`);
-
-      // Set the value
-      equipmentSelect.value = itemHrid;
-
-      // Dispatch comprehensive events to ensure the change is recognized
-      equipmentSelect.dispatchEvent(new Event('input', { bubbles: true }));
-      equipmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      equipmentSelect.dispatchEvent(new Event('blur', { bubbles: true }));
-
-      // Also try focus/focusout events in case they're needed
-      equipmentSelect.dispatchEvent(new Event('focus', { bubbles: true }));
-      equipmentSelect.dispatchEvent(new Event('focusout', { bubbles: true }));
-
-      // Trigger any custom events the simulator might be listening for
-      equipmentSelect.dispatchEvent(new CustomEvent('equipment-changed', {
-        bubbles: true,
-        detail: { slot, itemHrid }
-      }));
-
-      console.log(`✅ Equipment set for ${slot}: ${equipmentSelect.value}`);
-      return true;
-    } else {
-      console.log(`❌ Equipment selector not found: ${equipmentSelectId}`);
+    if (!equipmentSelect) {
+      return {
+        success: false,
+        error: `Equipment selector not found: ${equipmentSelectId}`,
+        debugInfo: {
+          selectorId: equipmentSelectId,
+          elementFound: false
+        }
+      };
     }
-    return false;
+
+    const currentValue = equipmentSelect.value;
+
+    // Log available options for debugging
+    const options = Array.from(equipmentSelect.options).map(option => ({
+      value: option.value,
+      text: option.text
+    }));
+
+    // Check if the itemHrid exists as an option
+    const targetOption = Array.from(equipmentSelect.options).find(option => option.value === itemHrid);
+    if (!targetOption) {
+      return {
+        success: false,
+        error: `Item ${itemHrid} not found in ${slot} dropdown options`,
+        debugInfo: {
+          selectorId: equipmentSelectId,
+          elementFound: true,
+          currentValue,
+          targetItemHrid: itemHrid,
+          availableOptions: options,
+          totalOptions: options.length
+        }
+      };
+    }
+
+    // Set the value
+    equipmentSelect.value = itemHrid;
+    const valueAfterSet = equipmentSelect.value;
+
+    // Dispatch comprehensive events to ensure the change is recognized
+    equipmentSelect.dispatchEvent(new Event('input', { bubbles: true }));
+    equipmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    equipmentSelect.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    // Also try focus/focusout events in case they're needed
+    equipmentSelect.dispatchEvent(new Event('focus', { bubbles: true }));
+    equipmentSelect.dispatchEvent(new Event('focusout', { bubbles: true }));
+
+    // Trigger any custom events the simulator might be listening for
+    equipmentSelect.dispatchEvent(new CustomEvent('equipment-changed', {
+      bubbles: true,
+      detail: { slot, itemHrid }
+    }));
+
+    const finalValue = equipmentSelect.value;
+
+    // Verify the change actually took effect
+    const success = finalValue === itemHrid;
+
+    return {
+      success,
+      error: success ? null : `Failed: ${slot} dropdown value is ${finalValue}, expected ${itemHrid}`,
+      debugInfo: {
+        selectorId: equipmentSelectId,
+        elementFound: true,
+        currentValue,
+        targetItemHrid: itemHrid,
+        valueAfterSet,
+        finalValue,
+        targetOptionFound: !!targetOption,
+        targetOptionText: targetOption?.text,
+        availableOptions: options.slice(0, 10), // Limit to first 10 for readability
+        totalOptions: options.length
+      }
+    };
   }, slot, itemHrid);
+
+  console.log(`📊 Equipment selection result for ${slot}:`, result);
+
+  if (!result.success) {
+    console.error(`❌ ${result.error}`);
+    console.error(`🔍 Debug info:`, result.debugInfo);
+  } else {
+    console.log(`✅ Successfully set ${slot} to ${itemHrid}`);
+  }
+
+  return result.success;
 }
 
 async function setAbilityLevels(page: Page, character: CharacterStats, abilityTargetLevels?: { [abilityHrid: string]: number }, testOnlyAbilityHrid?: string) {
@@ -1243,7 +1287,7 @@ async function setAbilityLevels(page: Page, character: CharacterStats, abilityTa
   // Add extra wait time for local debugging
   if (isLocal) {
     console.log('🐛 LOCAL DEBUG: Adding extra wait time before setting abilities...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // await new Promise(resolve => setTimeout(resolve, 2000)); // COMMENTED: 2s debug wait for abilities - testing removal
   }
 
   return await page.evaluate((abilities, targetLevels, testOnlyAbility) => {
@@ -1308,7 +1352,7 @@ async function setHouseLevels(page: Page, character: CharacterStats, houseTarget
   // Add extra wait time for local debugging
   if (isLocal) {
     console.log('🐛 LOCAL DEBUG: Adding extra wait time before opening house modal...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // await new Promise(resolve => setTimeout(resolve, 2000)); // COMMENTED: 2s debug wait before house modal - testing removal
   }
 
   // Open house rooms modal
@@ -1323,7 +1367,7 @@ async function setHouseLevels(page: Page, character: CharacterStats, houseTarget
   });
 
   // Wait for modal to open (longer wait for local debugging)
-  const modalWaitTime = isLocal ? 3000 : 1000;
+  const modalWaitTime = isLocal ? 1000 : 500;  // Reduced from 3000/1000ms to 1000/500ms
   console.log(`⏱️ Waiting ${modalWaitTime}ms for house modal to open...`);
   await new Promise(resolve => setTimeout(resolve, modalWaitTime));
 
@@ -1384,7 +1428,7 @@ async function setHouseLevels(page: Page, character: CharacterStats, houseTarget
     });
 
     // Wait for modal to close (longer wait for local debugging)
-    const closeWaitTime = isLocal ? 3000 : 1000;
+    const closeWaitTime = isLocal ? 1000 : 500;  // Reduced from 3000/1000ms to 1000/500ms
     console.log(`⏱️ Waiting ${closeWaitTime}ms for house modal to close...`);
     await new Promise(resolve => setTimeout(resolve, closeWaitTime));
 
@@ -1392,59 +1436,11 @@ async function setHouseLevels(page: Page, character: CharacterStats, houseTarget
   });
 }
 
-// Extract total available items for each combat slot from combat simulator
-async function extractCombatSlotItems(page: Page) {
-  console.log('📋 Extracting total available items for each combat slot...');
-
-  const combatSlotItems = await page.evaluate(() => {
-    const COMBAT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
-    const slotItems: { [slot: string]: Array<{ itemHrid: string; itemName: string; }> } = {};
-
-    COMBAT_SLOTS.forEach(slot => {
-      const selectId = `#selectEquipment_${slot}`;
-      const selectElement = document.querySelector(selectId) as HTMLSelectElement;
-
-      console.log(`🔍 Reading all items for slot: ${slot} (${selectId})`);
-
-      if (selectElement) {
-        const items = Array.from(selectElement.options)
-          .filter(opt => opt.value !== '') // Exclude "Empty" option
-          .map(opt => ({
-            itemHrid: opt.value,
-            itemName: opt.text
-          }));
-
-        slotItems[slot] = items;
-        console.log(`  ✅ Found ${items.length} items for ${slot}`);
-      } else {
-        console.log(`  ❌ Select element not found for ${slot}: ${selectId}`);
-        slotItems[slot] = [];
-      }
-    });
-
-    return slotItems;
-  });
-
-  // Log all items found for each slot
-  console.log('🎯 TOTAL COMBAT SLOT ITEMS EXTRACTED:');
-  Object.entries(combatSlotItems).forEach(([slot, items]) => {
-    console.log(`  📦 ${slot.toUpperCase()}: ${items.length} total items available`);
-    items.forEach((item, index) => {
-      console.log(`     [${index + 1}] ${item.itemHrid} - "${item.itemName}"`);
-    });
-    console.log(''); // Empty line for readability
-  });
-
-  console.log('✅ Combat slot items extraction completed');
-  console.log(`📊 SUMMARY: Total items found across all slots: ${Object.values(combatSlotItems).reduce((total, items) => total + items.length, 0)}`);
-
-  return combatSlotItems;
-}
 
 async function runSingleSimulation(page: Page, targetZone: string, targetTier?: string) {
   if (isLocal) {
     console.log(`🎯 LOCAL DEBUG: Setting zone to ${targetZone} and running simulation...`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // await new Promise(resolve => setTimeout(resolve, 1000)); // COMMENTED: 1s debug pause before zone setting - testing removal
   }
 
   await page.evaluate((targetZone, targetTier) => {
@@ -1478,7 +1474,7 @@ async function runSingleSimulation(page: Page, targetZone: string, targetTier?: 
     }
   }, targetZone, targetTier);
 
-  await new Promise(resolve => setTimeout(resolve, 500));
+  // await new Promise(resolve => setTimeout(resolve, 500)); // COMMENTED: 500ms wait before simulation - testing removal
 
   await page.evaluate(() => {
     const startButton = document.querySelector('#buttonStartSimulation') as HTMLElement;
@@ -1491,7 +1487,7 @@ async function runSingleSimulation(page: Page, targetZone: string, targetTier?: 
   });
 
   // Wait for simulation to complete (longer for local debugging)
-  const simulationWaitTime = isLocal ? 15000 : 10000;
+  const simulationWaitTime = isLocal ? 7000 : 5000;  // Reduced from 15000/10000ms to 7000/5000ms
   console.log(`⏱️ Waiting ${simulationWaitTime}ms for simulation to complete...`);
   await new Promise(resolve => setTimeout(resolve, simulationWaitTime));
 

@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         '--disable-component-extensions-with-background-pages',
         '--window-size=1920,1080'
       ],
-      timeout: 60000
+      timeout: 30000  // Reduced from 60000ms (60s) to 30000ms (30s)
     });
 
     const page = await browser.newPage();
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       console.log('🌐 Navigating to combat simulator...');
       await page.goto('https://shykai.github.io/MWICombatSimulatorTest/dist/', {
         waitUntil: 'networkidle2',
-        timeout: 90000
+        timeout: 45000  // Reduced from 90000ms (90s) to 45000ms (45s)
       });
 
       // First thing: Load marketplace prices
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Wait for prices to load
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // await new Promise(resolve => setTimeout(resolve, 3000)); // COMMENTED: 3s wait after marketplace prices - testing removal
       console.log('✅ Marketplace prices loaded');
 
       // Import character data
@@ -329,25 +329,6 @@ async function updateEnhancementField(page: Page, slot: string, level: number) {
 }
 
 // Helper function to run a single simulation
-async function updateEquipmentSelection(page: Page, slot: string, itemHrid: string) {
-  return await page.evaluate((slot, itemHrid) => {
-    const equipmentSelectId = `#selectEquipment_${slot}`;
-    const equipmentSelect = document.querySelector(equipmentSelectId) as HTMLSelectElement;
-
-    if (equipmentSelect) {
-      console.log(`🔄 Setting equipment for ${slot} to: ${itemHrid}`);
-      equipmentSelect.value = itemHrid;
-      equipmentSelect.dispatchEvent(new Event('input', { bubbles: true }));
-      equipmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      equipmentSelect.dispatchEvent(new Event('blur', { bubbles: true }));
-      return true;
-    } else {
-      console.log(`❌ Equipment selector not found: ${equipmentSelectId}`);
-    }
-    return false;
-  }, slot, itemHrid);
-}
-
 async function runSingleSimulation(page: Page, targetZone: string, targetTier?: string) {
   // Configure simulation settings
   await page.evaluate((targetZone, targetTier) => {

@@ -27,7 +27,11 @@
       "WebFetch(domain:vercel.com)",
       "Bash(npx @sparticuz/chromium:*)",
       "Bash(git restore:*)",
-      "WebFetch(domain:milkywayidle.wiki.gg)"
+      "WebFetch(domain:milkywayidle.wiki.gg)",
+      "Read(//d/WebServer/react/bookmarks/**)",
+      "Bash(git rm:*)",
+      "Bash(cat:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []
