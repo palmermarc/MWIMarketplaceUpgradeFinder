@@ -627,6 +627,10 @@ export async function POST(request: NextRequest) {
 
                 console.log(`📝 Testing equipment override: ${slot} with ${itemHrid} at level ${enhancementLevel}`);
 
+                // Re-import character data for a fresh baseline before each test
+                console.log(`🔄 Re-importing character data for fresh baseline before testing ${slot}`);
+                await importCharacterData(page, rawCharacterData);
+
                 // Set the equipment dropdown to the override item
                 console.log(`🔄 Setting equipment dropdown for ${slot} to: ${itemHrid}`);
                 await updateEquipmentSelection(page, slot, itemHrid);
@@ -682,29 +686,7 @@ export async function POST(request: NextRequest) {
                   totalSimulations
                 });
 
-                // Reset equipment dropdown and enhancement level to baseline
-                console.log(`🔄 Resetting ${slot} to baseline after equipment override test`);
-
-                // First, determine what the original item was for this slot
-                const parsedOriginalData = JSON.parse(rawCharacterData);
-                const originalEquipmentArray = parsedOriginalData.player?.equipment || [];
-                const lookupSlotForReset = slot === 'weapon' ? 'main_hand' : slot;
-                const originalItemLocationHrid = `/item_locations/${lookupSlotForReset}`;
-                const originalItem = originalEquipmentArray.find((item: { itemLocationHrid: string; itemHrid: string; enhancementLevel: number }) =>
-                  item.itemLocationHrid === originalItemLocationHrid
-                );
-
-                if (originalItem) {
-                  // Reset to original item and enhancement level
-                  await updateEquipmentSelection(page, slot, originalItem.itemHrid);
-                  await updateEnhancementField(page, slot, originalItem.enhancementLevel);
-                } else {
-                  // No original item, reset to empty
-                  await updateEquipmentSelection(page, slot, '');
-                  await updateEnhancementField(page, slot, 0);
-                }
-
-                // await new Promise(resolve => setTimeout(resolve, 500)); // COMMENTED: 500ms wait after reset - testing removal
+                // Fresh character re-import replaces manual reset - no baseline auto-simulation triggered
 
               } catch (error) {
                 console.error(`❌ Failed to test equipment override ${slot}:`, error);
