@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CharacterImport } from '@/components/CharacterImport';
 import { MarketplaceAnalyzer } from '@/components/MarketplaceAnalyzer';
 import { Navigation, NavigationTab } from '@/components/Navigation';
 import { TabContent } from '@/components/TabContent';
@@ -9,6 +8,7 @@ import { CharacterStats } from '@/types/character';
 import { MarketData, UpgradeOpportunity } from '@/types/marketplace';
 import { CombatSlotItems } from '@/constants/combatItems';
 import { useMarketplaceAutoLoader } from '@/hooks/useMarketplaceAutoLoader';
+import { useCharacterAutoLoader } from '@/hooks/useCharacterAutoLoader';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Home() {
@@ -20,8 +20,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<NavigationTab>('import-character');
   const [upgrades, setUpgrades] = useState<UpgradeOpportunity[]>([]);
 
-  // Auto-loader for marketplace data
+  // Auto-loaders for marketplace and character data
   const marketplaceAutoLoader = useMarketplaceAutoLoader();
+  const characterAutoLoader = useCharacterAutoLoader();
 
   // Sync auto-loader data with local state
   useEffect(() => {
@@ -30,6 +31,20 @@ export default function Home() {
       setMarketData(marketplaceAutoLoader.marketData);
     }
   }, [marketplaceAutoLoader.marketData]);
+
+  // Sync character auto-loader data and update active tab
+  useEffect(() => {
+    if (characterAutoLoader.character) {
+      console.log('🔄 APP: Auto-loading character from storage:', characterAutoLoader.characterName);
+      setCharacter(characterAutoLoader.character);
+      setRawCharacterData(characterAutoLoader.rawCharacterData);
+
+      // Skip to find-upgrades tab if we have auto-loaded character
+      if (activeTab === 'import-character') {
+        setActiveTab('find-upgrades');
+      }
+    }
+  }, [characterAutoLoader.character, characterAutoLoader.characterName, characterAutoLoader.rawCharacterData, activeTab]);
 
   const handleCharacterImported = (characterData: CharacterStats, rawData?: string) => {
     setCharacter(characterData);
