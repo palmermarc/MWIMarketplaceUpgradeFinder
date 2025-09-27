@@ -19,6 +19,7 @@ export default function Home() {
   const [combatItems, setCombatItems] = useState<CombatSlotItems | null>(null);
   const [activeTab, setActiveTab] = useState<NavigationTab>('import-character');
   const [upgrades, setUpgrades] = useState<UpgradeOpportunity[]>([]);
+  const [hasUserNavigated, setHasUserNavigated] = useState(false);
 
   // Auto-loaders for marketplace and character data
   const marketplaceAutoLoader = useMarketplaceAutoLoader();
@@ -32,19 +33,20 @@ export default function Home() {
     }
   }, [marketplaceAutoLoader.marketData]);
 
-  // Sync character auto-loader data and update active tab
+  // Sync character auto-loader data and update active tab only if user hasn't navigated
   useEffect(() => {
     if (characterAutoLoader.character) {
       console.log('🔄 APP: Auto-loading character from storage:', characterAutoLoader.characterName);
       setCharacter(characterAutoLoader.character);
       setRawCharacterData(characterAutoLoader.rawCharacterData);
 
-      // Skip to find-upgrades tab if we have auto-loaded character
-      if (activeTab === 'import-character') {
+      // Only auto-navigate to find-upgrades if user hasn't manually navigated yet
+      if (activeTab === 'import-character' && !hasUserNavigated) {
+        console.log('🚀 APP: Auto-navigating to find-upgrades tab');
         setActiveTab('find-upgrades');
       }
     }
-  }, [characterAutoLoader.character, characterAutoLoader.characterName, characterAutoLoader.rawCharacterData, activeTab]);
+  }, [characterAutoLoader.character, characterAutoLoader.characterName, characterAutoLoader.rawCharacterData, activeTab, hasUserNavigated]);
 
   const handleCharacterImported = (characterData: CharacterStats, rawData?: string) => {
     setCharacter(characterData);
@@ -84,10 +86,17 @@ export default function Home() {
     console.log(`📊 TOTAL: ${totalItems} items across ${Object.keys(items).length} slots stored in app state`);
   };
 
+  // Handle manual tab navigation by user
+  const handleTabChange = (tab: NavigationTab) => {
+    console.log(`👤 APP: User manually navigated to ${tab} tab`);
+    setHasUserNavigated(true);
+    setActiveTab(tab);
+  };
+
   return (
     <div className={`min-h-screen w-full ${theme.mode === 'classic' ? 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900' : theme.backgroundColor}`}>
       {/* Header navigation always visible */}
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Marketplace status indicator */}
       <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'dark' ? { backgroundColor: '#556b2f', borderBottomColor: '#E8000A' } : {}}>
