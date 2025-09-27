@@ -23,8 +23,8 @@ const themes: Record<ThemeMode, ThemeConfig> = {
     textColor: 'text-white',
     cardBackground: 'bg-gray-800',
     borderColor: 'border-gray-600',
-    buttonBackground: 'bg-blue-600',
-    buttonHover: 'hover:bg-blue-700',
+    buttonBackground: 'bg-blue-700',
+    buttonHover: 'hover:bg-blue-800',
     inputBackground: 'bg-gray-700',
     inputBorder: 'border-gray-600'
   },

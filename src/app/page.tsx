@@ -91,7 +91,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen w-full ${theme.mode === 'classic' ? 'bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900' : theme.backgroundColor}`}>
+    <div className={`min-h-screen w-full ${theme.mode === 'classic' ? 'bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900' : theme.backgroundColor}`}>
       {/* Header navigation always visible */}
       <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
 
