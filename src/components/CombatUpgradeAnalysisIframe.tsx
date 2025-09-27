@@ -221,6 +221,17 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
     return roomHrid.replace('/house_rooms/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  // Helper function to format increase/decrease text properly
+  const formatChangeText = (value: number, unit: string): string => {
+    if (value > 0) {
+      return `Increase: +${value.toLocaleString()} ${unit}`;
+    } else if (value < 0) {
+      return `Decrease: ${Math.abs(value).toLocaleString()} ${unit}`;
+    } else {
+      return `No Change: 0 ${unit}`;
+    }
+  };
+
   // Function to map house room to skill icon
   const getHouseRoomIcon = (roomHrid: string): string => {
     const roomType = roomHrid.replace('/house_rooms/', '').toLowerCase();
@@ -1983,12 +1994,12 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                             {/* Column 3: Benefits and Total */}
                             <div className="text-right">
                               <div className="text-orange-300 font-bold mb-1">
-                                +{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                                {((recommendation.percentageIncrease as number) || 0) >= 0 ? '+' : ''}{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
                               </div>
                               <div className="text-orange-200 text-sm mb-1">
-                                Increase: {optimizeFor === 'profit'
-                                  ? `+${((recommendation.profitIncrease as number) || 0).toLocaleString()} coins/day`
-                                  : `+${((recommendation.experienceIncrease as number) || 0).toLocaleString()} exp/hr`
+                                {optimizeFor === 'profit'
+                                  ? formatChangeText((recommendation.profitIncrease as number) || 0, 'coins/day')
+                                  : formatChangeText((recommendation.experienceIncrease as number) || 0, 'exp/hr')
                                 }
                               </div>
                               {baselineResults && (
@@ -2061,12 +2072,12 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                             {/* Column 3: Benefits and Total */}
                             <div className="text-right">
                               <div className="text-blue-300 font-bold mb-1">
-                                +{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                                {((recommendation.percentageIncrease as number) || 0) >= 0 ? '+' : ''}{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
                               </div>
                               <div className="text-blue-200 text-sm mb-1">
-                                Increase: {optimizeFor === 'profit'
-                                  ? `+${((recommendation.profitIncrease as number) || 0).toLocaleString()} coins/day`
-                                  : `+${((recommendation.experienceIncrease as number) || 0).toLocaleString()} exp/hr`
+                                {optimizeFor === 'profit'
+                                  ? formatChangeText((recommendation.profitIncrease as number) || 0, 'coins/day')
+                                  : formatChangeText((recommendation.experienceIncrease as number) || 0, 'exp/hr')
                                 }
                               </div>
                               {baselineResults && (
@@ -2127,12 +2138,12 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                             {/* Column 3: Benefits and Total */}
                             <div className="text-right">
                               <div className="text-green-300 font-bold mb-1">
-                                +{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                                {((recommendation.percentageIncrease as number) || 0) >= 0 ? '+' : ''}{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
                               </div>
                               <div className="text-green-200 text-sm mb-1">
-                                Increase: {optimizeFor === 'profit'
-                                  ? `+${((recommendation.profitIncrease as number) || 0).toLocaleString()} coins/day`
-                                  : `+${((recommendation.experienceIncrease as number) || 0).toLocaleString()} exp/hr`
+                                {optimizeFor === 'profit'
+                                  ? formatChangeText((recommendation.profitIncrease as number) || 0, 'coins/day')
+                                  : formatChangeText((recommendation.experienceIncrease as number) || 0, 'exp/hr')
                                 }
                               </div>
                               {baselineResults && (
