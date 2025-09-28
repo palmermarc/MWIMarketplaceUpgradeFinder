@@ -17,11 +17,23 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     { id: 'find-upgrades' as NavigationTab, label: 'Find Upgrades' },
     { id: 'calculate-costs' as NavigationTab, label: 'Calculate Costs' },
     //{ id: 'quick-upgrades' as NavigationTab, label: 'Quick Upgrades' },
-    { id: 'skills-calculator' as NavigationTab, label: 'Skills Calculator' },
+    //{ id: 'skills-calculator' as NavigationTab, label: 'Skills Calculator' },
   ];
 
   return (
-    <header className={`${theme.mode === 'classic' ? 'bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 border-b border-white/20' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`} shadow-lg`} style={theme.mode === 'dark' ? { backgroundColor: '#1a1a1a', borderBottomColor: '#E8000A' } : {}}>
+    <header
+      className={`${theme.mode === 'classic' ? 'border-b' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`} shadow-lg`}
+      style={{
+        ...(theme.mode === 'classic' ? {
+          background: 'linear-gradient(180deg,rgba(84,109,219,.5019607843),rgba(84,109,219,0))',
+          borderBottomColor: '#98a7e9'
+        } : {}),
+        ...(theme.mode === 'dark' ? {
+          backgroundColor: '#1a1a1a',
+          borderBottomColor: '#E8000A'
+        } : {})
+      }}
+    >
       <div className="w-full px-6 py-4">
         <div className="flex items-center">
           {/* Logo */}

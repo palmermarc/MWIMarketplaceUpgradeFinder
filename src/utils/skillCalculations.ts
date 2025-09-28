@@ -29,6 +29,7 @@
  */
 
 import { GatheringItem } from '@/constants/gatheringSkills';
+import { getToolBonuses } from '@/constants/items';
 
 // Types for calculation inputs
 export interface SkillLevels {
@@ -49,9 +50,14 @@ export interface HouseRoomLevels {
 }
 
 export interface EquipmentBonuses {
-  hasBrush: boolean;       // Milking speed bonus
-  hasShears: boolean;      // Foraging speed bonus
-  hasHatchet: boolean;     // Woodcutting speed bonus
+  hasBrush: boolean;       // Milking speed bonus (deprecated - use activeTool)
+  hasShears: boolean;      // Foraging speed bonus (deprecated - use activeTool)
+  hasHatchet: boolean;     // Woodcutting speed bonus (deprecated - use activeTool)
+  activeTool?: {           // Specific tool being used
+    milking?: string;      // Tool name (e.g., "Holy Brush")
+    woodcutting?: string;  // Tool name (e.g., "Holy Hatchet")
+    foraging?: string;     // Tool name (e.g., "Holy Shears")
+  };
 }
 
 export interface CalculationResult {
@@ -125,13 +131,30 @@ export function calculateWisdom(houseRoomLevel: number): number {
  */
 export function calculateRareFind(
   baseRareChance: number,
-  houseRoomLevel: number
+  houseRoomLevel: number,
+  equipment?: EquipmentBonuses,
+  skillName?: string
 ): number {
   // House rooms: +0.2% rare find per level (multiplicative)
-  const roomBonus = houseRoomLevel * 0.2;
+  let totalRareFindBonus = houseRoomLevel * 0.2;
+
+  // Tool bonuses for rare find (Celestial tools have +15% rare find)
+  if (equipment && skillName) {
+    let toolName = '';
+    if (skillName === 'milking') toolName = equipment.activeTool?.milking || '';
+    else if (skillName === 'woodcutting') toolName = equipment.activeTool?.woodcutting || '';
+    else if (skillName === 'foraging') toolName = equipment.activeTool?.foraging || '';
+
+    if (toolName) {
+      const bonuses = getToolBonuses(toolName);
+      if (bonuses?.rareFind) {
+        totalRareFindBonus += bonuses.rareFind;
+      }
+    }
+  }
 
   // Apply multiplicative bonus: base * (1 + bonus/100)
-  return baseRareChance * (1 + roomBonus / 100);
+  return baseRareChance * (1 + totalRareFindBonus / 100);
 }
 
 /**
@@ -147,20 +170,67 @@ export function calculateActionSpeed(
 ): number {
   let speedModifier = 1.0; // 1.0 = no change, 0.5 = 50% faster
 
-  // Equipment bonuses (these would need specific values from game data)
-  if (skillName === 'milking' && equipment.hasBrush) {
-    // Brush bonus - would need actual value from game
-    speedModifier *= 0.9; // Example: 10% faster
+  // Tool bonuses will be imported at the top of the file
+
+  // Equipment bonuses using real tool data
+  if (skillName === 'milking') {
+    // Check for specific tool first
+    const toolName = equipment.activeTool?.milking;
+    if (toolName) {
+      const bonuses = getToolBonuses(toolName);
+      if (bonuses?.professionSpeed) {
+        // Real game mechanics: Speed bonuses are less dramatic than simple % reduction
+        // Based on testing: Holy Brush (+90% speed) reduces 20s to ~10.3s (48.5% reduction)
+        // This suggests speed bonuses work as: base_speed / (1 + speed_bonus_factor)
+        // where speed_bonus_factor is roughly 50% of the stated bonus percentage
+
+        const realSpeedFactor = bonuses.professionSpeed * 0.55; // Adjusted factor
+        speedModifier *= (1 - realSpeedFactor / 100);
+      }
+    } else if (equipment.hasBrush) {
+      // Fallback to default 10% for backwards compatibility
+      speedModifier *= 0.9;
+    }
   }
 
-  if (skillName === 'foraging' && equipment.hasShears) {
-    // Shears bonus - would need actual value from game
-    speedModifier *= 0.9; // Example: 10% faster
+  if (skillName === 'foraging') {
+    // Check for specific tool first
+    const toolName = equipment.activeTool?.foraging;
+    if (toolName) {
+      const bonuses = getToolBonuses(toolName);
+      if (bonuses?.professionSpeed) {
+        // Real game mechanics: Speed bonuses are less dramatic than simple % reduction
+        // Based on testing: Holy Brush (+90% speed) reduces 20s to ~10.3s (48.5% reduction)
+        // This suggests speed bonuses work as: base_speed / (1 + speed_bonus_factor)
+        // where speed_bonus_factor is roughly 50% of the stated bonus percentage
+
+        const realSpeedFactor = bonuses.professionSpeed * 0.55; // Adjusted factor
+        speedModifier *= (1 - realSpeedFactor / 100);
+      }
+    } else if (equipment.hasShears) {
+      // Fallback to default 10% for backwards compatibility
+      speedModifier *= 0.9;
+    }
   }
 
-  if (skillName === 'woodcutting' && equipment.hasHatchet) {
-    // Hatchet bonus - would need actual value from game
-    speedModifier *= 0.9; // Example: 10% faster
+  if (skillName === 'woodcutting') {
+    // Check for specific tool first
+    const toolName = equipment.activeTool?.woodcutting;
+    if (toolName) {
+      const bonuses = getToolBonuses(toolName);
+      if (bonuses?.professionSpeed) {
+        // Real game mechanics: Speed bonuses are less dramatic than simple % reduction
+        // Based on testing: Holy Brush (+90% speed) reduces 20s to ~10.3s (48.5% reduction)
+        // This suggests speed bonuses work as: base_speed / (1 + speed_bonus_factor)
+        // where speed_bonus_factor is roughly 50% of the stated bonus percentage
+
+        const realSpeedFactor = bonuses.professionSpeed * 0.55; // Adjusted factor
+        speedModifier *= (1 - realSpeedFactor / 100);
+      }
+    } else if (equipment.hasHatchet) {
+      // Fallback to default 10% for backwards compatibility
+      speedModifier *= 0.9;
+    }
   }
 
   // Enhancing speed bonus: 1% per level above item's recommended level
@@ -204,7 +274,7 @@ export function calculateGatheringSkillResults(
 
   // Calculate rare find for rare items
   const rareFind = gatheringItem.isRare
-    ? calculateRareFind(gatheringItem.dropChance, houseRoomLevel)
+    ? calculateRareFind(gatheringItem.dropChance, houseRoomLevel, equipment, skillName)
     : gatheringItem.dropChance;
 
   // Calculate action speed
@@ -217,8 +287,23 @@ export function calculateGatheringSkillResults(
     skillName === 'enhancing' ? houseRoomLevels.observatory : undefined
   );
 
-  // Calculate experience with wisdom bonus
-  const modifiedExperience = gatheringItem.experiencePerGather * (1 + wisdom / 100);
+  // Calculate experience with wisdom bonus and tool bonuses
+  let totalExperienceMultiplier = 1 + wisdom / 100;
+
+  // Tool bonuses for experience (Celestial tools have +4% experience)
+  let toolName = '';
+  if (skillName === 'milking') toolName = equipment.activeTool?.milking || '';
+  else if (skillName === 'woodcutting') toolName = equipment.activeTool?.woodcutting || '';
+  else if (skillName === 'foraging') toolName = equipment.activeTool?.foraging || '';
+
+  if (toolName) {
+    const bonuses = getToolBonuses(toolName);
+    if (bonuses?.experience) {
+      totalExperienceMultiplier *= (1 + bonuses.experience / 100);
+    }
+  }
+
+  const modifiedExperience = gatheringItem.experiencePerGather * totalExperienceMultiplier;
 
   // Calculate effective actions per hour (accounting for efficiency)
   const baseActionsPerHour = 3600 / modifiedTime;

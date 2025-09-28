@@ -64,6 +64,7 @@ interface UpgradeSimulationRequest {
   equipmentOverrides?: { [slot: string]: string }; // For "Set another X" functionality
   abilityTargetLevels?: { [abilityHrid: string]: number };
   houseTargetLevels?: { [roomHrid: string]: number };
+  abilityGroups?: Array<Array<{ abilityHrid: string; level: number }>>;
 }
 
 // Enhancement cost calculation function - uses MarketplaceService for consistent pricing
@@ -275,7 +276,7 @@ async function launchBrowserForEnvironment() {
 }
 
 export async function POST(request: NextRequest) {
-  const { character, rawCharacterData, targetZone, targetTier, optimizeFor, selectedLevels, equipmentOverrides, abilityTargetLevels, houseTargetLevels }: UpgradeSimulationRequest = await request.json();
+  const { character, rawCharacterData, targetZone, targetTier, optimizeFor, selectedLevels, equipmentOverrides, abilityTargetLevels, houseTargetLevels, abilityGroups }: UpgradeSimulationRequest = await request.json();
 
   // Create a readable stream for Server-Sent Events
   const encoder = new TextEncoder();
@@ -391,6 +392,13 @@ export async function POST(request: NextRequest) {
               console.log(`🏠 ${roomName}: Testing level ${currentLevel} → ${targetLevel}`);
             }
           });
+        }
+
+        // Add ability group tests to total count (exclude the first group as it's the baseline)
+        if (abilityGroups && abilityGroups.length > 1) {
+          const abilityGroupTestCount = abilityGroups.length - 1;
+          totalSimulations += abilityGroupTestCount;
+          console.log(`🧠 Ability group tests: ${abilityGroupTestCount} tests`);
         }
 
         // Add equipment override tests to total count
@@ -925,6 +933,107 @@ export async function POST(request: NextRequest) {
             simulationCount++;
           }
 
+          // Test each ability group (test all ability groups beyond the first one)
+          if (abilityGroups && abilityGroups.length > 1) {
+            console.log(`🧠 Testing ${abilityGroups.length - 1} additional ability groups...`);
+
+            // Skip the first group (index 0) as it's the baseline
+            for (let groupIndex = 1; groupIndex < abilityGroups.length; groupIndex++) {
+              const abilityGroup = abilityGroups[groupIndex];
+              const progress = 20 + ((simulationCount / totalSimulations) * 75);
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'test_starting',
+                slot: 'ability_group',
+                testLevel: groupIndex,
+                currentLevel: 0,
+                progress,
+                simulationCount,
+                totalSimulations,
+                message: `Testing ability group ${groupIndex + 1}`
+              })}\n\n`));
+
+              try {
+                console.log(`🧠 Testing ability group ${groupIndex + 1}:`, abilityGroup);
+
+                // Re-import character data for fresh baseline
+                await importCharacterData(page, rawCharacterData || JSON.stringify(character));
+
+                // Set this ability group configuration
+                await setAbilitySelections(page, abilityGroup);
+
+                // Wait for changes to register
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Run simulation with this ability group
+                const testResult = await runSingleSimulation(page, targetZone, targetTier);
+
+                const profitIncreasePerDay = testResult.profitPerDay - baselineResults.profitPerDay;
+                const expIncreasePerHour = testResult.experienceGain - baselineResults.experienceGain;
+
+                console.log(`🧠 Ability Group ${groupIndex + 1} Test Results:`);
+                console.log(`  - Baseline Profit Per Day: ${baselineResults.profitPerDay.toLocaleString()}`);
+                console.log(`  - Test Result Profit Per Day: ${testResult.profitPerDay.toLocaleString()}`);
+                console.log(`  - Profit Increase Per Day: ${profitIncreasePerDay.toLocaleString()}`);
+                console.log(`  - Experience Increase Per Hour: ${expIncreasePerHour.toLocaleString()}`);
+
+                const abilityGroupTest: UpgradeTestResult = {
+                  slot: `ability_group_${groupIndex}`,
+                  currentEnhancement: 0,
+                  testEnhancement: groupIndex,
+                  experienceGain: testResult.experienceGain,
+                  profitPerDay: testResult.profitPerDay,
+                  success: true,
+                  abilityName: `Ability Group ${groupIndex + 1}`
+                };
+
+                upgradeTests.push(abilityGroupTest);
+
+                // Send individual test result immediately
+                safeEnqueue({
+                  type: 'test_complete',
+                  result: abilityGroupTest,
+                  progress,
+                  simulationCount,
+                  totalSimulations,
+                  expIncrease: expIncreasePerHour,
+                  profitIncrease: profitIncreasePerDay,
+                  abilityName: `Ability Group ${groupIndex + 1}`
+                });
+
+                // Reset to baseline abilities for next test
+                await importCharacterData(page, rawCharacterData || JSON.stringify(character));
+
+              } catch (error) {
+                console.error(`❌ Failed to test ability group ${groupIndex + 1}:`, error);
+
+                const failedAbilityGroupTest: UpgradeTestResult = {
+                  slot: `ability_group_${groupIndex}`,
+                  currentEnhancement: 0,
+                  testEnhancement: groupIndex,
+                  experienceGain: 0,
+                  profitPerDay: 0,
+                  success: false,
+                  abilityName: `Ability Group ${groupIndex + 1}`
+                };
+
+                upgradeTests.push(failedAbilityGroupTest);
+
+                safeEnqueue({
+                  type: 'test_failed',
+                  result: failedAbilityGroupTest,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  progress,
+                  simulationCount,
+                  totalSimulations,
+                  abilityName: `Ability Group ${groupIndex + 1}`
+                });
+              }
+
+              simulationCount++;
+            }
+          }
+
           // Calculate and send final recommendations
           const recommendations = calculateRecommendations(baselineResults, upgradeTests, optimizeFor);
 
@@ -1317,6 +1426,93 @@ async function setAbilityLevels(page: Page, character: CharacterStats, abilityTa
     console.log(`⚙️ Ability level setting complete: ${successCount} successful, ${failureCount} failed`);
     return { successCount, failureCount };
   }, character.abilities, abilityTargetLevels, testOnlyAbilityHrid);
+}
+
+async function setAbilitySelections(page: Page, abilityGroup: Array<{ abilityHrid: string; level: number }>) {
+  console.log('⚙️ Setting ability selections for ability group test...');
+  console.log('🧠 Ability group:', abilityGroup);
+
+  return await page.evaluate((abilities) => {
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Set abilities for slots 0-4 (5 ability slots total)
+    for (let slotIndex = 0; slotIndex < 5; slotIndex++) {
+      const ability = abilities[slotIndex]; // Get ability for this slot (may be undefined if not enough abilities)
+      const selectElement = document.querySelector(`#selectAbility_${slotIndex}`) as HTMLSelectElement;
+
+      if (selectElement) {
+        if (ability && ability.abilityHrid) {
+          console.log(`  🎯 Attempting to set ability slot ${slotIndex} to ${ability.abilityHrid}`);
+
+          // Debug: Check available options
+          const options = Array.from(selectElement.options).map(opt => ({
+            value: opt.value,
+            text: opt.text
+          }));
+          console.log(`  📋 Available options for slot ${slotIndex}:`, options);
+
+          // Check if the target ability exists in the dropdown
+          const targetOption = Array.from(selectElement.options).find(opt => opt.value === ability.abilityHrid);
+          if (!targetOption) {
+            console.log(`  ❌ Target ability ${ability.abilityHrid} not found in dropdown options!`);
+            failureCount++;
+            continue;
+          }
+
+          // Store current value for comparison
+          const currentValue = selectElement.value;
+          console.log(`  📊 Current dropdown value: ${currentValue}`);
+
+          // Set the ability selection
+          selectElement.value = ability.abilityHrid;
+
+          // Trigger all relevant events
+          selectElement.dispatchEvent(new Event('input', { bubbles: true }));
+          selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+          selectElement.dispatchEvent(new Event('blur', { bubbles: true }));
+
+          // Verify the change took effect
+          const newValue = selectElement.value;
+          console.log(`  📊 New dropdown value after setting: ${newValue}`);
+
+          if (newValue === ability.abilityHrid) {
+            console.log(`  ✅ Successfully set ability slot ${slotIndex} to ${ability.abilityHrid}`);
+
+            // Also set the ability level
+            const levelFieldId = `#inputAbilityLevel_${slotIndex}`;
+            const levelField = document.querySelector(levelFieldId) as HTMLInputElement;
+            if (levelField) {
+              const currentLevel = levelField.value;
+              levelField.value = ability.level.toString();
+              levelField.dispatchEvent(new Event('input', { bubbles: true }));
+              levelField.dispatchEvent(new Event('change', { bubbles: true }));
+              levelField.dispatchEvent(new Event('blur', { bubbles: true }));
+              console.log(`  ✅ Set ability level ${slotIndex} from ${currentLevel} to ${ability.level}`);
+            } else {
+              console.log(`  ⚠️ Level field not found for slot ${slotIndex}: ${levelFieldId}`);
+            }
+
+            successCount++;
+          } else {
+            console.log(`  ❌ Failed to set ability slot ${slotIndex}. Expected: ${ability.abilityHrid}, Got: ${newValue}`);
+            failureCount++;
+          }
+        } else {
+          // Set to empty if no ability for this slot
+          console.log(`  🔲 Setting ability slot ${slotIndex} to empty (no ability provided)`);
+          selectElement.value = '';
+          selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } else {
+        console.log(`  ❌ Ability select field not found: #selectAbility_${slotIndex}`);
+        failureCount++;
+      }
+    }
+
+    console.log(`⚙️ Ability selection setting complete: ${successCount} successful, ${failureCount} failed`);
+    return { successCount, failureCount };
+  }, abilityGroup);
 }
 
 async function setHouseLevels(page: Page, character: CharacterStats, houseTargetLevels?: { [roomHrid: string]: number }, testOnlyRoomHrid?: string) {

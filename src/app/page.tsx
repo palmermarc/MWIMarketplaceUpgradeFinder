@@ -27,7 +27,7 @@ export default function Home() {
   // Sync auto-loader data with local state
   useEffect(() => {
     if (marketplaceAutoLoader.marketData) {
-      console.log('🔄 APP: Syncing marketplace data from auto-loader');
+      // Syncing marketplace data from auto-loader
       setMarketData(marketplaceAutoLoader.marketData);
     }
   }, [marketplaceAutoLoader.marketData]);
@@ -35,15 +35,15 @@ export default function Home() {
   // Sync character auto-loader data (no navigation - keep user on their chosen page)
   useEffect(() => {
     if (characterAutoLoader.character) {
-      console.log('🔄 APP: Auto-loading character from storage:', characterAutoLoader.characterName);
+      // Auto-loading character from storage
       setCharacter(characterAutoLoader.character);
       setRawCharacterData(characterAutoLoader.rawCharacterData);
-      console.log('📍 APP: Keeping user on current tab:', activeTab);
+      // Keeping user on current tab
     }
   }, [characterAutoLoader.character, characterAutoLoader.characterName, characterAutoLoader.rawCharacterData, activeTab]);
 
   const handleCharacterImported = (characterData: CharacterStats, rawData?: string) => {
-    console.log('✅ APP: Manual character import completed, navigating to find-upgrades');
+    // Manual character import completed, navigating to find-upgrades
     setCharacter(characterData);
     setRawCharacterData(rawData || null);
 
@@ -61,42 +61,26 @@ export default function Home() {
 
   const handleCombatItemsLoaded = (items: CombatSlotItems) => {
     setCombatItems(items);
-    console.log('🎯 MAIN PAGE: Combat items loaded and stored in state');
-
-    // Log comprehensive breakdown for verification
-    console.log('🔍 COMBAT ITEMS BREAKDOWN:');
-    Object.entries(items).forEach(([slot, slotItems]) => {
-      console.log(`  ${slot.toUpperCase()}: ${Object.keys(slotItems).length} items`);
-
-      // Log first few items as examples
-      const itemEntries = Object.entries(slotItems);
-      const samplesToShow = Math.min(3, itemEntries.length);
-      for (let i = 0; i < samplesToShow; i++) {
-        const [itemHrid, itemName] = itemEntries[i];
-        console.log(`    - ${itemHrid} → "${itemName}"`);
-      }
-      if (itemEntries.length > samplesToShow) {
-        console.log(`    ... and ${itemEntries.length - samplesToShow} more`);
-      }
-    });
-
-    const totalItems = Object.values(items).reduce((sum, slotItems) => sum + Object.keys(slotItems).length, 0);
-    console.log(`📊 TOTAL: ${totalItems} items across ${Object.keys(items).length} slots stored in app state`);
   };
 
   // Handle manual tab navigation by user
   const handleTabChange = (tab: NavigationTab) => {
-    console.log(`👤 APP: User manually navigated to ${tab} tab`);
+    // User manually navigated to tab
     setActiveTab(tab);
   };
 
   return (
-    <div className={`min-h-screen w-full ${theme.mode === 'classic' ? 'bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900' : theme.backgroundColor}`}>
+    <div
+      className={`min-h-screen w-full ${theme.mode !== 'classic' ? theme.backgroundColor : ''}`}
+      style={theme.mode === 'classic' ? {
+        background: 'linear-gradient(180deg,var(--color-midnight-900-opacity-25),var(--color-midnight-500-opacity-25) 8%,var(--color-midnight-500-opacity-25))'
+      } : {}}
+    >
       {/* Header navigation always visible */}
       <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Marketplace status indicator */}
-      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b border-white/10' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'dark' ? { backgroundColor: '#556b2f', borderBottomColor: '#E8000A' } : {}}>
+      <div className={`w-full ${theme.mode === 'classic' ? 'bg-black/20 border-b' : theme.mode === 'dark' ? 'border-b' : `${theme.cardBackground} border-b ${theme.borderColor}`}`} style={theme.mode === 'classic' ? { borderBottomColor: '#98a7e9' } : theme.mode === 'dark' ? { backgroundColor: '#556b2f', borderBottomColor: '#E8000A' } : {}}>
         <div className="max-w-7xl mx-auto px-6 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

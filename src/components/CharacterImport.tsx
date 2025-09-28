@@ -5,7 +5,7 @@ import { CharacterData, CharacterStats } from '@/types/character';
 import { MarketData } from '@/types/marketplace';
 import { MarketplaceService } from '@/services/marketplace';
 import { COMBAT_ITEMS } from '@/constants/combatItems';
-import { useCharacterStorage, useMarketplaceStorage, useCombatItemsStorage } from '@/hooks/useBrowserStorage';
+import { useCharacterStorage, useCombatItemsStorage } from '@/hooks/useBrowserStorage';
 import { useMarketplaceAutoLoader } from '@/hooks/useMarketplaceAutoLoader';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -27,7 +27,6 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
 
   // Storage hooks
   const characterStorage = useCharacterStorage();
-  const marketplaceStorage = useMarketplaceStorage();
   const combatItemsStorage = useCombatItemsStorage();
 
   // Auto-loader for marketplace data
@@ -38,13 +37,13 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
     const checkExistingData = async () => {
       // Use marketplace data from auto-loader (which handles freshness automatically)
       if (marketplaceAutoLoader.marketData) {
-        console.log('Found marketplace data from auto-loader');
+        // Found marketplace data from auto-loader
         onMarketDataLoaded(marketplaceAutoLoader.marketData);
       }
 
       // Check if we have combat items data
       if (combatItemsStorage.combatItems && onCombatItemsLoaded) {
-        console.log('Found combat items data in storage');
+        // Found combat items data in storage
         onCombatItemsLoaded(combatItemsStorage.combatItems.data);
       }
     };
@@ -119,7 +118,7 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
           jsonInput,
 'Imported Character'
         );
-        console.log(`Character saved to storage with ID: ${characterId}`);
+        // Character saved to storage
       } catch (storageError) {
         console.error('Failed to save character to storage:', storageError);
         // Don't fail the import if storage fails
@@ -130,10 +129,10 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
 
       // Use marketplace data from auto-loader (which handles freshness automatically)
       if (marketplaceAutoLoader.marketData) {
-        console.log('Using marketplace data from auto-loader');
+        // Using marketplace data from auto-loader
         onMarketDataLoaded(marketplaceAutoLoader.marketData);
       } else if (marketplaceAutoLoader.isLoading) {
-        console.log('Auto-loader is still loading marketplace data');
+        // Auto-loader is still loading marketplace data
         setLoadingMessage('Waiting for marketplace data to load...');
 
         // Wait a bit for auto-loader to finish
@@ -143,13 +142,13 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
 
         const waitForMarketData = () => {
           if (marketplaceAutoLoader.marketData) {
-            console.log('Marketplace data loaded by auto-loader');
+            // Marketplace data loaded by auto-loader
             onMarketDataLoaded(marketplaceAutoLoader.marketData);
           } else if (waitedTime < maxWaitTime && marketplaceAutoLoader.isLoading) {
             waitedTime += checkInterval;
             setTimeout(waitForMarketData, checkInterval);
           } else {
-            console.warn('Auto-loader did not provide marketplace data in time');
+            // Auto-loader did not provide marketplace data in time
             setError('Character imported successfully, but marketplace data is still loading');
           }
         };
@@ -166,27 +165,27 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
       // Load combat items (check storage first, then use constants)
       if (onCombatItemsLoaded) {
         setLoadingMessage('Loading combat items...');
-        console.log('🔧 CHARACTER IMPORT: Loading combat items...');
+        // Loading combat items...
 
         // Check if we have combat items in storage
         if (combatItemsStorage.combatItems) {
-          console.log('Using combat items from storage');
+          // Using combat items from storage
           onCombatItemsLoaded(combatItemsStorage.combatItems.data);
         } else {
           // Use constants and save to storage
-          console.log('Loading combat items from constants');
+          // Loading combat items from constants
           onCombatItemsLoaded(COMBAT_ITEMS);
 
           // Save to storage for future use
           try {
             const combatId = await combatItemsStorage.saveCombatItems(COMBAT_ITEMS, 'constants');
-            console.log(`Combat items saved to storage with ID: ${combatId}`);
+            // Combat items saved to storage
           } catch (storageError) {
             console.error('Failed to save combat items to storage:', storageError);
           }
         }
 
-        console.log('✅ CHARACTER IMPORT: Combat items loaded successfully');
+        // Combat items loaded successfully
 
         // Combat items loading is complete - clear secondary loading
         setIsLoadingCombatItems(false);
@@ -206,9 +205,78 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8">
-     
+    <div className={`${theme.cardBackground} ${theme.borderColor} border rounded-lg p-8`}>
       <div className="space-y-6">
+        {/* Stored Characters Section - moved to top */}
+        {characterStorage.characters.length > 0 && (
+          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-green-200 mb-4">📂 Stored Characters</h3>
+            <div className="space-y-3">
+              {characterStorage.characters.slice(0, 5).map((storedChar) => (
+                <div
+                  key={storedChar.id}
+                  className="bg-black/20 rounded-lg p-3 border border-green-500/30 flex justify-between items-center"
+                >
+                  <div className="flex-1">
+                    <p className="text-white font-medium">{storedChar.name}</p>
+                    <p className="text-green-300 text-sm">
+                      Saved: {new Date(storedChar.timestamp).toLocaleDateString()} {new Date(storedChar.timestamp).toLocaleTimeString()}
+                    </p>
+                    <p className="text-green-400 text-xs">
+                      Last accessed: {new Date(storedChar.lastAccessed).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          setImportedCharacter(storedChar.data);
+                          onCharacterImported(storedChar.data, storedChar.rawData);
+                          // Loaded character from storage
+                        } catch (err) {
+                          console.error('Failed to load character from storage:', err);
+                          setError('Failed to load character from storage');
+                        }
+                      }}
+                      disabled={isLoading || isLoadingCombatItems}
+                      className="bg-green-600/20 border border-green-500/50 rounded px-3 py-1 text-green-200 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to delete "${storedChar.name}"? This action cannot be undone.`)) {
+                          try {
+                            const success = await characterStorage.deleteCharacter(storedChar.id);
+                            if (success) {
+                              // Deleted character from storage
+                            } else {
+                              setError('Failed to delete character from storage');
+                            }
+                          } catch (err) {
+                            console.error('Failed to delete character from storage:', err);
+                            setError('Failed to delete character from storage');
+                          }
+                        }
+                      }}
+                      disabled={isLoading || isLoadingCombatItems}
+                      className="bg-red-600/20 border border-red-500/50 rounded px-3 py-1 text-red-200 hover:bg-red-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      title="Delete this character"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {characterStorage.characters.length > 5 && (
+                <p className="text-green-300 text-sm text-center">
+                  ... and {characterStorage.characters.length - 5} more characters
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         <div>
           <label className={`block ${theme.textColor} text-center mb-2`}>
             Paste your character JSON export:
@@ -253,146 +321,6 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
           {(isLoading || isLoadingCombatItems) ? 'Processing...' : 'Import Character'}
         </button>
 
-        {/* Stored Characters Section */}
-        {characterStorage.characters.length > 0 && (
-          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-green-200 mb-4">📂 Stored Characters</h3>
-            <div className="space-y-3">
-              {characterStorage.characters.slice(0, 5).map((storedChar) => (
-                <div
-                  key={storedChar.id}
-                  className="bg-black/20 rounded-lg p-3 border border-green-500/30 flex justify-between items-center"
-                >
-                  <div className="flex-1">
-                    <p className="text-white font-medium">{storedChar.name}</p>
-                    <p className="text-green-300 text-sm">
-                      Saved: {new Date(storedChar.timestamp).toLocaleDateString()} {new Date(storedChar.timestamp).toLocaleTimeString()}
-                    </p>
-                    <p className="text-green-400 text-xs">
-                      Last accessed: {new Date(storedChar.lastAccessed).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={async () => {
-                        try {
-                          setImportedCharacter(storedChar.data);
-                          onCharacterImported(storedChar.data, storedChar.rawData);
-                          console.log(`Loaded character from storage: ${storedChar.name}`);
-                        } catch (err) {
-                          console.error('Failed to load character from storage:', err);
-                          setError('Failed to load character from storage');
-                        }
-                      }}
-                      disabled={isLoading || isLoadingCombatItems}
-                      className="bg-green-600/20 border border-green-500/50 rounded px-3 py-1 text-green-200 hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                      Load
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (confirm(`Are you sure you want to delete "${storedChar.name}"? This action cannot be undone.`)) {
-                          try {
-                            const success = await characterStorage.deleteCharacter(storedChar.id);
-                            if (success) {
-                              console.log(`Deleted character from storage: ${storedChar.name}`);
-                            } else {
-                              setError('Failed to delete character from storage');
-                            }
-                          } catch (err) {
-                            console.error('Failed to delete character from storage:', err);
-                            setError('Failed to delete character from storage');
-                          }
-                        }
-                      }}
-                      disabled={isLoading || isLoadingCombatItems}
-                      className="bg-red-600/20 border border-red-500/50 rounded px-3 py-1 text-red-200 hover:bg-red-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                      title="Delete this character"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {characterStorage.characters.length > 5 && (
-                <p className="text-green-300 text-sm text-center">
-                  ... and {characterStorage.characters.length - 5} more characters
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Storage Status Indicators */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Marketplace Data Status */}
-          <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
-            <h4 className="text-blue-200 font-medium mb-2">🏪 Marketplace Data</h4>
-            {marketplaceAutoLoader.marketData ? (
-              <div className="space-y-1">
-                <p className="text-blue-300 text-sm">
-                  {marketplaceAutoLoader.getStatusText()}
-                </p>
-                <p className="text-blue-400 text-xs">
-                  {marketplaceAutoLoader.isFresh ? '✅ Fresh' : '⚠️ Stale (will refresh automatically)'}
-                </p>
-                <p className="text-blue-400 text-xs">
-                  {marketplaceAutoLoader.marketData.totalItems} items
-                </p>
-                {marketplaceAutoLoader.dataAge && (
-                  <p className="text-blue-500 text-xs">
-                    Age: {marketplaceAutoLoader.dataAge.toFixed(1)} hours
-                  </p>
-                )}
-              </div>
-            ) : marketplaceAutoLoader.isLoading ? (
-              <div className="space-y-1">
-                <p className="text-blue-300 text-sm">Loading marketplace data...</p>
-                <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : marketplaceAutoLoader.error ? (
-              <div className="space-y-1">
-                <p className="text-red-300 text-sm">Error loading data</p>
-                <p className="text-red-400 text-xs">{marketplaceAutoLoader.error}</p>
-              </div>
-            ) : (
-              <p className="text-blue-300 text-sm">Initializing...</p>
-            )}
-          </div>
-
-          {/* Combat Items Status */}
-          <div className={`rounded-lg p-4 ${theme.mode === 'dark' ? 'border' : 'bg-blue-500/20 border border-blue-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(181, 0, 8, 0.2)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
-            <h4 className={`font-medium mb-2 ${theme.mode === 'dark' ? 'text-red-200' : 'text-blue-200'}`}>⚔️ Combat Items</h4>
-            {combatItemsStorage.combatItems ? (
-              <div className="space-y-1">
-                <p className={`text-sm ${theme.mode === 'dark' ? 'text-red-300' : 'text-blue-300'}`}>
-                  Last updated: {new Date(combatItemsStorage.combatItems.timestamp).toLocaleDateString()}
-                </p>
-                <p className={`text-xs ${theme.mode === 'dark' ? 'text-red-400' : 'text-blue-400'}`}>
-                  Source: {combatItemsStorage.combatItems.source}
-                </p>
-                <p className={`text-xs ${theme.mode === 'dark' ? 'text-red-400' : 'text-blue-400'}`}>
-                  {Object.keys(combatItemsStorage.combatItems.data).length} equipment slots
-                </p>
-              </div>
-            ) : (
-              <p className={`text-sm ${theme.mode === 'dark' ? 'text-red-300' : 'text-blue-300'}`}>No stored data</p>
-            )}
-          </div>
-
-          {/* Storage Stats */}
-          <div className="bg-gray-500/20 border border-gray-500/50 rounded-lg p-4">
-            <h4 className="text-gray-200 font-medium mb-2">💾 Storage</h4>
-            <div className="space-y-1">
-              <p className="text-gray-300 text-sm">
-                Characters: {characterStorage.characters.length}
-              </p>
-              <p className="text-gray-400 text-xs">
-                Total stored items: {characterStorage.characters.length + (marketplaceStorage.marketData ? 1 : 0) + (combatItemsStorage.combatItems ? 1 : 0)}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {importedCharacter && (
           <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">

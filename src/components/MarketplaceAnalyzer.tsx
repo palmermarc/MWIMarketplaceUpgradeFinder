@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MarketData, AuctionItem, ItemAnalysis, UpgradeOpportunity } from '@/types/marketplace';
 import { CharacterStats } from '@/types/character';
 import { CombatSlotItems } from '@/constants/combatItems';
@@ -22,6 +22,12 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
   const [upgrades, setUpgrades] = useState<UpgradeOpportunity[]>([]);
   const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
   const [showQuickUpgrades, setShowQuickUpgrades] = useState(false);
+  const onUpgradesFoundRef = useRef(onUpgradesFound);
+
+  // Keep ref updated
+  useEffect(() => {
+    onUpgradesFoundRef.current = onUpgradesFound;
+  }, [onUpgradesFound]);
 
 
 
@@ -141,10 +147,10 @@ export function MarketplaceAnalyzer({ character, marketData, rawCharacterData, c
     setUpgrades(upgradeOpportunities);
 
     // Notify parent component about upgrades found
-    if (onUpgradesFound) {
-      onUpgradesFound(upgradeOpportunities);
+    if (onUpgradesFoundRef.current) {
+      onUpgradesFoundRef.current(upgradeOpportunities);
     }
-  }, [onUpgradesFound]);
+  }, []);
 
   // Effect to run analysis when data changes
   useEffect(() => {

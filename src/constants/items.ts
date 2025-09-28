@@ -7,6 +7,13 @@ export interface ItemInfo {
   type: string;
   skillHrid?: string; // For tools - which skill they belong to
   slot?: string; // For equipment - which slot they go in
+  toolBonuses?: ToolBonuses; // For gathering tools - their stat bonuses
+}
+
+export interface ToolBonuses {
+  professionSpeed: number; // Percentage speed bonus (e.g., 15 for 15%)
+  rareFind?: number; // Percentage rare find bonus (e.g., 15 for 15%)
+  experience?: number; // Percentage experience bonus (e.g., 4 for 4%)
 }
 
 export interface ItemsByCategory {
@@ -27,7 +34,8 @@ const createItem = (
   type: string,
   subCategory?: string,
   skillHrid?: string,
-  slot?: string
+  slot?: string,
+  toolBonuses?: ToolBonuses
 ): ItemInfo => ({
   itemHrid: createItemHrid(name),
   name: name.toLowerCase().replace(/\s+/g, '_').replace(/'/g, ''),
@@ -36,7 +44,8 @@ const createItem = (
   subCategory,
   type,
   skillHrid,
-  slot
+  slot,
+  toolBonuses
 });
 
 export const ITEMS_BY_CATEGORY: ItemsByCategory = {
@@ -55,28 +64,34 @@ export const ITEMS_BY_CATEGORY: ItemsByCategory = {
 
   tools: {
     milking: [
-      createItem('Cheese Bucket', 'tools', 'tool', 'milking', '/skills/milking'),
-      createItem('Bronze Bucket', 'tools', 'tool', 'milking', '/skills/milking'),
-      createItem('Iron Bucket', 'tools', 'tool', 'milking', '/skills/milking'),
-      createItem('Silver Bucket', 'tools', 'tool', 'milking', '/skills/milking'),
-      createItem('Gold Bucket', 'tools', 'tool', 'milking', '/skills/milking'),
-      createItem('Astral Bucket', 'tools', 'tool', 'milking', '/skills/milking')
+      createItem('Cheese Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 15 }),
+      createItem('Verdant Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 22.5 }),
+      createItem('Azure Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 30 }),
+      createItem('Burble Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 45 }),
+      createItem('Crimson Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 60 }),
+      createItem('Rainbow Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 75 }),
+      createItem('Holy Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 90 }),
+      createItem('Celestial Brush', 'tools', 'tool', 'milking', '/skills/milking', undefined, { professionSpeed: 105, rareFind: 15, experience: 4 })
     ],
     woodcutting: [
-      createItem('Cheese Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting'),
-      createItem('Bronze Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting'),
-      createItem('Iron Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting'),
-      createItem('Silver Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting'),
-      createItem('Gold Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting'),
-      createItem('Astral Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting')
+      createItem('Cheese Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 15 }),
+      createItem('Verdant Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 22.5 }),
+      createItem('Azure Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 30 }),
+      createItem('Burble Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 45 }),
+      createItem('Crimson Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 60 }),
+      createItem('Rainbow Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 75 }),
+      createItem('Holy Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 90 }),
+      createItem('Celestial Hatchet', 'tools', 'tool', 'woodcutting', '/skills/woodcutting', undefined, { professionSpeed: 105, rareFind: 15, experience: 4 })
     ],
     foraging: [
-      createItem('Cheese Net', 'tools', 'tool', 'foraging', '/skills/foraging'),
-      createItem('Bronze Net', 'tools', 'tool', 'foraging', '/skills/foraging'),
-      createItem('Iron Net', 'tools', 'tool', 'foraging', '/skills/foraging'),
-      createItem('Silver Net', 'tools', 'tool', 'foraging', '/skills/foraging'),
-      createItem('Gold Net', 'tools', 'tool', 'foraging', '/skills/foraging'),
-      createItem('Astral Net', 'tools', 'tool', 'foraging', '/skills/foraging')
+      createItem('Cheese Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 15 }),
+      createItem('Verdant Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 22.5 }),
+      createItem('Azure Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 30 }),
+      createItem('Burble Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 45 }),
+      createItem('Crimson Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 60 }),
+      createItem('Rainbow Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 75 }),
+      createItem('Holy Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 90 }),
+      createItem('Celestial Shears', 'tools', 'tool', 'foraging', '/skills/foraging', undefined, { professionSpeed: 105, rareFind: 15, experience: 4 })
     ],
     cheesesmithing: [
       createItem('Cheese Hammer', 'tools', 'tool', 'cheesesmithing', '/skills/cheesesmithing'),
@@ -362,3 +377,28 @@ export const EQUIPMENT_SLOT_DISPLAY_NAMES: { [key: string]: string } = {
   ring: 'Ring',
   trinket: 'Trinket'
 };
+
+/**
+ * Get tool bonuses by item name
+ * @param itemName - The display name of the tool (e.g., "Holy Brush")
+ * @returns Tool bonuses if found, undefined otherwise
+ */
+export function getToolBonuses(itemName: string): ToolBonuses | undefined {
+  // Search through all tool categories
+  for (const categoryItems of Object.values(ITEMS_BY_CATEGORY.tools)) {
+    const tool = categoryItems.find(item => item.displayName === itemName);
+    if (tool?.toolBonuses) {
+      return tool.toolBonuses;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Get all tools for a specific gathering skill
+ * @param skillName - The gathering skill name ('milking', 'woodcutting', 'foraging')
+ * @returns Array of tool items for that skill
+ */
+export function getGatheringTools(skillName: 'milking' | 'woodcutting' | 'foraging'): ItemInfo[] {
+  return ITEMS_BY_CATEGORY.tools[skillName] || [];
+}

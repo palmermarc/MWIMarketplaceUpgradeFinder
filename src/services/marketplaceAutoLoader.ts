@@ -86,7 +86,7 @@ export class MarketplaceAutoLoaderService {
     try {
       const storedData = await browserStorage.getLatestMarketplaceData();
       if (storedData && storedData.expiresAt > Date.now()) {
-        console.log('📦 MARKETPLACE AUTO-LOADER: Found valid stored data');
+        // Found valid stored data
         return {
           data: storedData.data,
           timestamp: storedData.timestamp
@@ -94,7 +94,7 @@ export class MarketplaceAutoLoaderService {
       }
       return null;
     } catch (error) {
-      console.error('Failed to load marketplace data from storage:', error);
+      // Failed to load marketplace data from storage
       return null;
     }
   }
@@ -104,23 +104,23 @@ export class MarketplaceAutoLoaderService {
    */
   private async loadFromAPI(retryCount = 0): Promise<MarketData | null> {
     try {
-      console.log(`🌐 MARKETPLACE AUTO-LOADER: Loading from API (attempt ${retryCount + 1})`);
+      // Loading from API
       const data = await MarketplaceService.getMarketplaceData();
 
       // Save to storage
       try {
         await browserStorage.saveMarketplaceData(data, 'api', MARKETPLACE_TTL_HOURS);
-        console.log('💾 MARKETPLACE AUTO-LOADER: Data saved to storage');
+        // Data saved to storage
       } catch (storageError) {
-        console.warn('Failed to save marketplace data to storage:', storageError);
+        // Failed to save marketplace data to storage
       }
 
       return data;
     } catch (error) {
-      console.error(`Failed to load marketplace data from API (attempt ${retryCount + 1}):`, error);
+      // Failed to load marketplace data from API
 
       if (retryCount < RETRY_ATTEMPTS - 1) {
-        console.log(`⏳ MARKETPLACE AUTO-LOADER: Retrying in ${RETRY_DELAY_MS}ms...`);
+        // Retrying...
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
         return this.loadFromAPI(retryCount + 1);
       }
@@ -145,7 +145,7 @@ export class MarketplaceAutoLoaderService {
    * Perform the initial data loading process
    */
   private async performInitialLoad(): Promise<void> {
-    console.log('🚀 MARKETPLACE AUTO-LOADER: Starting initialization...');
+    // Starting initialization...
 
     this.updateState({
       isLoading: true,
@@ -159,7 +159,7 @@ export class MarketplaceAutoLoaderService {
       if (storedResult) {
         const isFresh = this.isDataFresh(storedResult.timestamp);
 
-        console.log(`📊 MARKETPLACE AUTO-LOADER: Stored data found, age: ${((Date.now() - storedResult.timestamp) / (1000 * 60 * 60)).toFixed(1)} hours, fresh: ${isFresh}`);
+        // Stored data found
 
         this.updateState({
           isLoading: false,
@@ -178,7 +178,7 @@ export class MarketplaceAutoLoaderService {
         }
       } else {
         // Step 2: No stored data, load from API
-        console.log('📭 MARKETPLACE AUTO-LOADER: No stored data found, loading from API...');
+        // No stored data found, loading from API...
         const apiData = await this.loadFromAPI();
 
         if (apiData) {
@@ -198,7 +198,7 @@ export class MarketplaceAutoLoaderService {
         }
       }
     } catch (error) {
-      console.error('🚨 MARKETPLACE AUTO-LOADER: Initialization failed:', error);
+      // Initialization failed
       this.updateState({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to load marketplace data'
@@ -212,7 +212,7 @@ export class MarketplaceAutoLoaderService {
    * Refresh data in background without affecting UI state
    */
   private async refreshInBackground(): Promise<void> {
-    console.log('🔄 MARKETPLACE AUTO-LOADER: Starting background refresh...');
+    // Starting background refresh...
 
     this.updateState({ isRefreshing: true });
 
@@ -230,16 +230,16 @@ export class MarketplaceAutoLoaderService {
           error: null
         });
 
-        console.log('✅ MARKETPLACE AUTO-LOADER: Background refresh completed successfully');
+        // Background refresh completed successfully
 
         // Schedule next refresh
         this.scheduleNextRefresh();
       } else {
-        console.warn('⚠️ MARKETPLACE AUTO-LOADER: Background refresh failed, keeping existing data');
+        // Background refresh failed, keeping existing data
         this.updateState({ isRefreshing: false });
       }
     } catch (error) {
-      console.error('🚨 MARKETPLACE AUTO-LOADER: Background refresh failed:', error);
+      // Background refresh failed
       this.updateState({
         isRefreshing: false,
         error: error instanceof Error ? error.message : 'Background refresh failed'
@@ -259,11 +259,11 @@ export class MarketplaceAutoLoaderService {
     const refreshDelayMs = MARKETPLACE_FRESHNESS_HOURS * 60 * 60 * 1000;
 
     this.refreshTimer = setTimeout(() => {
-      console.log('⏰ MARKETPLACE AUTO-LOADER: Scheduled refresh triggered');
+      // Scheduled refresh triggered
       this.refreshInBackground();
     }, refreshDelayMs);
 
-    console.log(`⏰ MARKETPLACE AUTO-LOADER: Next refresh scheduled in ${MARKETPLACE_FRESHNESS_HOURS} hours`);
+    // Next refresh scheduled
   }
 
   /**
@@ -271,7 +271,7 @@ export class MarketplaceAutoLoaderService {
    */
   async forceRefresh(): Promise<void> {
     if (this.currentState.isRefreshing) {
-      console.log('🔄 MARKETPLACE AUTO-LOADER: Refresh already in progress');
+      // Refresh already in progress
       return;
     }
 
@@ -325,7 +325,7 @@ if (typeof window !== 'undefined') {
   // Initialize after a short delay to ensure the app is ready
   setTimeout(() => {
     marketplaceAutoLoader.initialize().catch(error => {
-      console.error('Failed to initialize marketplace auto-loader:', error);
+      // Failed to initialize marketplace auto-loader
     });
   }, 1000);
 }

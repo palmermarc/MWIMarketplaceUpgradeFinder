@@ -22,11 +22,11 @@ const themes: Record<ThemeMode, ThemeConfig> = {
     backgroundColor: 'bg-gray-900',
     textColor: 'text-white',
     cardBackground: 'bg-gray-800',
-    borderColor: 'border-gray-600',
+    borderColor: 'border-[#98a7e9]',
     buttonBackground: 'bg-blue-700',
     buttonHover: 'hover:bg-blue-800',
     inputBackground: 'bg-gray-700',
-    inputBorder: 'border-gray-600'
+    inputBorder: 'border-[#98a7e9]'
   },
   light: {
     mode: 'light',

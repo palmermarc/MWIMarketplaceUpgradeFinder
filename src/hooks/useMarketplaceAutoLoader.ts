@@ -45,7 +45,7 @@ export const useMarketplaceAutoLoader = (): UseMarketplaceAutoLoaderResult => {
   // Initialize on mount
   useEffect(() => {
     marketplaceAutoLoader.initialize().catch(error => {
-      console.error('Failed to initialize marketplace auto-loader:', error);
+      // Failed to initialize marketplace auto-loader
     });
   }, []);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { CombatSimulatorApiService } from '@/services/combatSimulatorApi';
 import { CharacterStats } from '@/types/character';
 import { CombatSlotItems, COMBAT_ITEMS } from '@/constants/combatItems';
@@ -10,6 +10,7 @@ import { AbilityIcon } from './AbilityIcon';
 import { MarketplaceService } from '@/services/marketplace';
 import { combatSimulationStorage, SavedCombatSimulation } from '@/services/combatSimulationStorage';
 import { useTheme } from '@/contexts/ThemeContext';
+import { ABILITIES_BY_TYPE, ALL_ABILITIES } from '@/constants/abilities';
 
 // Equipment slots to test - defined as constant outside component
 const EQUIPMENT_SLOTS = ['head', 'neck', 'earrings', 'body', 'legs', 'feet', 'hands', 'ring', 'weapon', 'off_hand', 'pouch'];
@@ -131,6 +132,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
   const [zoneData, setZoneData] = useState<ZoneData[]>([]);
   const [equipmentTestResults, setEquipmentTestResults] = useState<{ [slot: string]: { level: number; profit: number; exp: number; enhancementCost?: number; paybackDays?: number; itemName?: string; itemHrid?: string }[] }>({});
   const [abilityTestResults, setAbilityTestResults] = useState<{ [abilityHrid: string]: { level: number; profit: number; exp: number }[] }>({});
+  const [abilityGroupResults, setAbilityGroupResults] = useState<{ [groupId: string]: { groupIndex: number; profit: number; exp: number; abilities: Array<{ abilityHrid: string; level: number }> } }>({});
   const [houseTestResults, setHouseTestResults] = useState<{ [roomHrid: string]: { level: number; profit: number; exp: number }[] }>({});
   const [equipmentRecommendations, setEquipmentRecommendations] = useState<Record<string, unknown>[]>([]);
   const [abilityRecommendations, setAbilityRecommendations] = useState<Record<string, unknown>[]>([]);
@@ -164,6 +166,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
   const [selectedCombatZone, setSelectedCombatZone] = useState<string>('/actions/combat/fly');
   const [selectedCombatTier, setSelectedCombatTier] = useState<string>('0');
   const [abilityTargetLevels, setAbilityTargetLevels] = useState<{ [abilityHrid: string]: number }>({});
+  const [abilityGroups, setAbilityGroups] = useState<Array<Array<{ abilityHrid: string; level: number }>>>([]);
 
   // Initialize display enhancement levels when combat items are loaded
   useEffect(() => {
@@ -213,8 +216,95 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
 
       setAbilityTargetLevels(initialAbilityLevels);
     }
-  }, [character.abilities, abilityTargetLevels]);
+  }, [character.abilities, Object.keys(abilityTargetLevels).length]);
 
+  // Initialize ability groups when abilities are available
+  useEffect(() => {
+    if (character.abilities && character.abilities.length > 0 && abilityGroups.length === 0) {
+      // Initialize with the current equipped abilities as the first group
+      const initialGroup = character.abilities.map((ability) => ({
+        abilityHrid: ability.abilityHrid,
+        level: ability.level
+      }));
+      setAbilityGroups([initialGroup]);
+    }
+  }, [character.abilities, abilityGroups.length]);
+
+  // Memoized weapon type detection to prevent infinite loops
+  const weaponType = useMemo((): 'melee' | 'ranged' | 'magic' => {
+    // Use the same slot mapping as the gear section
+    const mainHandEquipment = character.equipment?.['Main Hand'];
+    const weaponItem = mainHandEquipment?.item;
+
+    if (!weaponItem) {
+      return 'melee'; // Default to melee if no weapon
+    }
+
+    const weaponName = weaponItem.toLowerCase();
+
+    // Check for ranged weapons (bows and crossbows)
+    if (weaponName.includes('crossbow') || weaponName.includes('bow')) {
+      return 'ranged';
+    }
+
+    // Check for magic weapons (staffs and tridents)
+    if (weaponName.includes('staff') || weaponName.includes('trident')) {
+      return 'magic';
+    }
+
+    // Everything else is melee
+    return 'melee';
+  }, [character.equipment]);
+
+
+  // Memoized function to get auras from special abilities
+  const auras = useMemo(() => {
+    return ABILITIES_BY_TYPE.special?.filter(ability =>
+      ability.name.includes('aura') || ability.displayName.toLowerCase().includes('aura')
+    ) || [];
+  }, []);
+
+  // Memoized function to get available abilities based on weapon type
+  const getAvailableAbilities = useCallback((slotIndex: number) => {
+    // First slot can only have auras
+    if (slotIndex === 0) {
+      return auras;
+    }
+
+    // Other slots can have weapon-specific abilities + buffing abilities
+    const weaponAbilities = ABILITIES_BY_TYPE[weaponType] || [];
+    const buffingAbilities = ABILITIES_BY_TYPE.buffing || [];
+    return [...weaponAbilities, ...buffingAbilities];
+  }, [weaponType, auras]);
+
+  // Function to add a new ability group
+  const addAbilityGroup = () => {
+    // Initialize with current equipped abilities
+    const newGroup = character.abilities.map((ability) => ({
+      abilityHrid: ability.abilityHrid,
+      level: ability.level
+    }));
+    setAbilityGroups(prev => [...prev, newGroup]);
+  };
+
+  // Function to remove an ability group
+  const removeAbilityGroup = (groupIndex: number) => {
+    if (groupIndex === 0) return; // Can't remove the first group
+    setAbilityGroups(prev => prev.filter((_, index) => index !== groupIndex));
+  };
+
+  // Function to update an ability in a specific group
+  const updateAbilityInGroup = (groupIndex: number, slotIndex: number, abilityHrid: string, level: number) => {
+    setAbilityGroups(prev => prev.map((group, index) =>
+      index === groupIndex
+        ? group.map((ability, aIndex) =>
+            aIndex === slotIndex
+              ? { abilityHrid, level }
+              : ability
+          )
+        : group
+    ));
+  };
 
   // Function to parse house name from roomHrid
   const parseHouseName = (roomHrid: string): string => {
@@ -420,7 +510,8 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       // Calculate summary stats
       const totalTests = Object.keys(equipmentTestResults).length +
                         Object.keys(abilityTestResults).length +
-                        Object.keys(houseTestResults).length;
+                        Object.keys(houseTestResults).length +
+                        Object.keys(abilityGroupResults).length;
 
       const bestEquipmentUpgrade = equipmentRecommendations.length > 0 ? (equipmentRecommendations[0] as Record<string, unknown>).slot as string : undefined;
       const bestAbilityUpgrade = abilityRecommendations.length > 0 ? (abilityRecommendations[0] as Record<string, unknown>).abilityName as string : undefined;
@@ -592,6 +683,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
     setError(null);
     setEquipmentTestResults({});
     setAbilityTestResults({});
+    setAbilityGroupResults({});
     setHouseTestResults({});
     setEquipmentRecommendations([]);
     setAbilityRecommendations([]);
@@ -667,11 +759,14 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
       return simSlot.selectedItem && simSlot.selectedItem !== '';
     });
 
+    // Check for ability group changes (more than just the baseline group)
+    const hasAbilityGroupChanges = abilityGroups.length > 1;
+
     // Check if there are any changes to test
-    const hasChanges = slotsToTest.length > 0 || abilityChanges.length > 0 || houseChanges.length > 0 || additionalSlotChanges.length > 0;
+    const hasChanges = slotsToTest.length > 0 || abilityChanges.length > 0 || houseChanges.length > 0 || additionalSlotChanges.length > 0 || hasAbilityGroupChanges;
 
     if (!hasChanges) {
-      setError('No changes detected. Please modify enhancement levels, ability levels, or house levels to test.');
+      setError('No changes detected. Please modify enhancement levels, ability levels, house levels, or add ability groups to test.');
       setIsAnalyzingUpgrades(false);
       return;
     }
@@ -681,7 +776,8 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
         equipment: `${slotsToTest.length} slots`,
         additionalItems: `${additionalSlotChanges.length} additional slots`,
         abilities: `${abilityChanges.length} abilities`,
-        houses: `${houseChanges.length} rooms`
+        houses: `${houseChanges.length} rooms`,
+        abilityGroups: `${abilityGroups.length > 1 ? abilityGroups.length - 1 : 0} groups`
       });
 
       // Fetch marketplace prices for all test items first
@@ -715,7 +811,8 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
         selectedLevels,
         equipmentOverrides: Object.keys(equipmentOverrides).length > 0 ? equipmentOverrides : undefined,
         abilityTargetLevels,
-        houseTargetLevels: houseMaxLevels
+        houseTargetLevels: houseMaxLevels,
+        abilityGroups: abilityGroups.length > 0 ? abilityGroups : undefined
       };
 
       // Calculate total tests that will be run
@@ -800,25 +897,42 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
               break;
 
             case 'test_complete':
-              // Update the specific test result with actual values
-              setEquipmentTestingData(prevData =>
-                prevData.map(equipment => {
-                  if (equipment.slot === event.slot && event.result) {
-                    const updatedTestResults = { ...equipment.testResults };
-                    const testLevel = event.result.testEnhancement;
-                    // Create or update the test result entry
-                    updatedTestResults[testLevel] = {
-                      exp: event.result.experienceGain,
-                      profit: event.result.profitPerDay,
-                      status: 'completed',
-                      cost: event.enhancementCost,
-                      paybackDays: event.paybackDays
-                    };
-                    return { ...equipment, testResults: updatedTestResults };
+              // Handle ability group test results
+              if (event.abilityName && event.abilityName.startsWith('Ability Group') && event.result) {
+                const groupIndex = event.result.testEnhancement; // This is the group index
+                const groupId = `ability_group_${groupIndex}`;
+                const groupAbilities = abilityGroups[groupIndex] || [];
+
+                setAbilityGroupResults(prev => ({
+                  ...prev,
+                  [groupId]: {
+                    groupIndex: groupIndex,
+                    profit: event.result!.profitPerDay,
+                    exp: event.result!.experienceGain,
+                    abilities: groupAbilities
                   }
-                  return equipment;
-                })
-              );
+                }));
+              } else {
+                // Update the specific test result with actual values
+                setEquipmentTestingData(prevData =>
+                  prevData.map(equipment => {
+                    if (equipment.slot === event.slot && event.result) {
+                      const updatedTestResults = { ...equipment.testResults };
+                      const testLevel = event.result.testEnhancement;
+                      // Create or update the test result entry
+                      updatedTestResults[testLevel] = {
+                        exp: event.result.experienceGain,
+                        profit: event.result.profitPerDay,
+                        status: 'completed',
+                        cost: event.enhancementCost,
+                        paybackDays: event.paybackDays
+                      };
+                      return { ...equipment, testResults: updatedTestResults };
+                    }
+                    return equipment;
+                  })
+                );
+              }
               break;
 
             case 'test_failed':
@@ -880,7 +994,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                 setEquipmentTestResults(equipmentTestData);
               }
 
-              // Process ability test results
+              // Process ability test results (exclude ability group entries)
               if (event.abilityTests) {
                 const abilityTestData: { [abilityHrid: string]: { level: number; profit: number; exp: number }[] } = {};
                 event.abilityTests.forEach((test: {
@@ -891,6 +1005,11 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                   profitPerDay: number;
                   experienceGain: number;
                 }) => {
+                  // Skip ability group entries - they are handled separately
+                  if (test.abilityHrid.startsWith('ability_group_') || test.abilityHrid.startsWith('group_')) {
+                    return;
+                  }
+
                   if (!abilityTestData[test.abilityHrid]) {
                     abilityTestData[test.abilityHrid] = [];
                   }
@@ -902,6 +1021,7 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                 });
                 setAbilityTestResults(abilityTestData);
               }
+
 
               // Process house test results
               if (event.houseTests) {
@@ -931,7 +1051,14 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                 setEquipmentRecommendations(event.recommendations);
               }
               if (event.abilityRecommendations) {
-                setAbilityRecommendations(event.abilityRecommendations);
+                // Filter out ability group recommendations - they are handled separately
+                const filteredAbilityRecommendations = event.abilityRecommendations.filter(
+                  (rec: Record<string, unknown>) => {
+                    const abilityHrid = rec.abilityHrid?.toString() || '';
+                    return !abilityHrid.startsWith('ability_group_') && !abilityHrid.startsWith('group_');
+                  }
+                );
+                setAbilityRecommendations(filteredAbilityRecommendations);
               }
               if (event.houseRecommendations) {
                 setHouseRecommendations(event.houseRecommendations);
@@ -1091,59 +1218,125 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
           {/* Abilities Section */}
           {showAbilities && character.abilities.length > 0 && (
             <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
-              <h4 className="text-md font-bold text-blue-200 mb-3 text-center">⚡ Abilities</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 justify-items-center">
-                {/* Empty first column for centering */}
-                <div className="hidden lg:block"></div>
-                {character.abilities.map((ability, index) => {
-                  // Extract ability name from "/abilities/ability_name" format
-                  const abilityName = ability.abilityHrid.replace('/abilities/', '');
-                  // Format name for display: capitalize and replace underscores with spaces
-                  const displayName = abilityName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-md font-bold text-blue-200 text-center flex-1">⚡ Abilities</h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={addAbilityGroup}
+                    className="text-sm text-blue-200 hover:text-blue-100 underline cursor-pointer"
+                  >
+                    Add another ability group
+                  </button>
+                </div>
+              </div>
 
-                  return (
-                    <div
-                      key={index}
-                      className="bg-black/20 rounded-lg p-3 border border-blue-500/30 text-center w-full"
-                    >
-                      <div className="space-y-2">
-                        {/* Ability Name */}
-                        <h5 className="text-white font-medium text-sm">
-                          {displayName}
-                        </h5>
-
-                        {/* Ability Icon */}
-                        <div className="flex justify-center">
-                          <div className="w-12 h-12">
-                            <AbilityIcon
-                              abilityId={abilityName}
-                              size={48}
-                              className="rounded border border-blue-400/50"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Ability Level Input */}
-                        <div className="flex justify-center">
-                          <input
-                            type="number"
-                            min="0"
-                            max="200"
-                            value={abilityTargetLevels[ability.abilityHrid] || ability.level}
-                            onChange={(e) => {
-                              const newLevel = Math.min(200, Math.max(0, parseInt(e.target.value) || 0));
-                              setAbilityTargetLevels(prev => ({
-                                ...prev,
-                                [ability.abilityHrid]: newLevel
-                              }));
-                            }}
-                            className="w-16 px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs text-center focus:border-blue-400 focus:outline-none"
-                          />
-                        </div>
-                      </div>
+              {/* Ability Groups Interface */}
+              <div className="space-y-4">
+                {abilityGroups.map((abilityGroup, groupIndex) => (
+                  <div key={groupIndex} className="bg-black/20 rounded-lg p-4 border border-blue-500/30">
+                    <div className="flex justify-between items-center mb-3">
+                      <h5 className={`font-medium text-sm ${groupIndex === 0 ? 'text-gray-300' : 'text-white'}`}>
+                        Ability Group {groupIndex + 1}
+                        {groupIndex === 0 && (
+                          <span className="text-gray-400 ml-2 text-xs">
+                            (Baseline - Read Only)
+                          </span>
+                        )}
+                      </h5>
+                      {groupIndex > 0 && (
+                        <button
+                          onClick={() => removeAbilityGroup(groupIndex)}
+                          className="text-red-400 hover:text-red-300 text-xs"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
-                  );
-                })}
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 justify-items-center">
+                      {/* Empty first column for centering */}
+                      <div className="hidden lg:block"></div>
+                      {abilityGroup.map((slotAbility, abilityIndex) => {
+                        const availableAbilities = getAvailableAbilities(abilityIndex);
+                        const currentAbility = ALL_ABILITIES.find((a) => a.hrid === slotAbility.abilityHrid);
+                        const isBaseline = groupIndex === 0; // Ability Group 1 is the baseline
+
+                        return (
+                          <div
+                            key={`${groupIndex}-${abilityIndex}`}
+                            className={`bg-black/30 rounded-lg p-3 border ${isBaseline ? 'border-gray-500/30' : 'border-blue-400/30'} text-center w-full ${isBaseline ? 'opacity-75' : ''}`}
+                          >
+                            <div className="space-y-2">
+                              {/* Ability Slot Label */}
+                              <div className={`text-xs ${isBaseline ? 'text-gray-400' : 'text-blue-300'}`}>
+                                {abilityIndex === 0 ? 'Aura Slot' : `Slot ${abilityIndex + 1}`}
+                                {isBaseline && <span className="block text-xs text-gray-500 mt-1">(Baseline)</span>}
+                              </div>
+
+                              {/* Ability Selection Dropdown */}
+                              <select
+                                value={slotAbility.abilityHrid}
+                                onChange={(e) => {
+                                  if (!isBaseline) {
+                                    const newAbilityHrid = e.target.value;
+                                    updateAbilityInGroup(groupIndex, abilityIndex, newAbilityHrid, slotAbility.level);
+                                  }
+                                }}
+                                disabled={isBaseline}
+                                className={`w-full p-1 bg-black/30 border rounded text-white text-xs focus:outline-none ${
+                                  isBaseline
+                                    ? 'border-gray-500/50 cursor-not-allowed text-gray-400'
+                                    : 'border-blue-500/50 focus:border-blue-400'
+                                }`}
+                              >
+                                {availableAbilities.map((availableAbility) => (
+                                  <option key={availableAbility.hrid} value={availableAbility.hrid}>
+                                    {availableAbility.displayName}
+                                  </option>
+                                ))}
+                              </select>
+
+                              {/* Ability Icon */}
+                              {currentAbility && (
+                                <div className="flex justify-center">
+                                  <div className="w-10 h-10">
+                                    <AbilityIcon
+                                      abilityId={currentAbility.name}
+                                      size={40}
+                                      className="rounded border border-blue-400/50"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Ability Level Input */}
+                              <div className="flex justify-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="200"
+                                  value={slotAbility.level}
+                                  onChange={(e) => {
+                                    if (!isBaseline) {
+                                      const newLevel = Math.min(200, Math.max(0, parseInt(e.target.value) || 0));
+                                      updateAbilityInGroup(groupIndex, abilityIndex, slotAbility.abilityHrid, newLevel);
+                                    }
+                                  }}
+                                  disabled={isBaseline}
+                                  className={`w-16 px-2 py-1 bg-black/30 border rounded text-xs text-center focus:outline-none ${
+                                    isBaseline
+                                      ? 'border-gray-500/50 cursor-not-allowed text-gray-400'
+                                      : 'border-blue-500/50 text-white focus:border-blue-400'
+                                  }`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1819,12 +2012,12 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
           )}
 
           {/* Unified Upgrade Results */}
-          {(Object.keys(equipmentTestResults).length > 0 || Object.keys(abilityTestResults).length > 0 || Object.keys(houseTestResults).length > 0) && (
+          {(Object.keys(equipmentTestResults).length > 0 || Object.keys(abilityTestResults).length > 0 || Object.keys(houseTestResults).length > 0 || Object.keys(abilityGroupResults).length > 0) && (
             <div className="space-y-4">
                 {(() => {
                   // Combine all upgrade types into a single array
                   const allUpgrades: Array<{
-                    type: 'equipment' | 'ability' | 'house';
+                    type: 'equipment' | 'ability' | 'house' | 'ability_group';
                     key: string;
                     recommendation: Record<string, unknown>;
                     testResults?: unknown;
@@ -1867,9 +2060,18 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                     }
                   });
 
-                  // Add ability upgrades
+                  // Add ability upgrades (exclude ability group entries)
                   Object.entries(abilityTestResults).forEach(([abilityHrid, testResults]) => {
-                    let recommendation = abilityRecommendations.find((rec: Record<string, unknown>) => rec.abilityHrid === abilityHrid);
+                    // Skip ability group entries - they are handled separately
+                    if (abilityHrid.startsWith('ability_group_') || abilityHrid.startsWith('group_')) {
+                      return;
+                    }
+                    let recommendation = abilityRecommendations.find((rec: Record<string, unknown>) => {
+                      const recAbilityHrid = rec.abilityHrid?.toString() || '';
+                      return rec.abilityHrid === abilityHrid &&
+                             !recAbilityHrid.startsWith('ability_group_') &&
+                             !recAbilityHrid.startsWith('group_');
+                    });
 
                     // If no recommendation exists, create one from the test result to show downgrades
                     if (!recommendation && testResults.length > 0) {
@@ -1929,6 +2131,30 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                         percentageIncrease: (recommendation.percentageIncrease as number) || 0
                       });
                     }
+                  });
+
+                  // Add ability group upgrades
+                  Object.entries(abilityGroupResults).forEach(([groupId, groupResult]) => {
+                    const profitIncrease = groupResult.profit - (baselineResults?.profitPerDay || 0);
+                    const experienceIncrease = groupResult.exp - (baselineResults?.experienceGain || 0);
+                    const percentageIncrease = baselineResults?.profitPerDay ? (profitIncrease / baselineResults.profitPerDay) * 100 : 0;
+
+                    const recommendation = {
+                      groupIndex: groupResult.groupIndex,
+                      groupName: `Ability Group ${groupResult.groupIndex + 1}`,
+                      experienceIncrease,
+                      profitIncrease,
+                      percentageIncrease,
+                      abilities: groupResult.abilities
+                    };
+
+                    allUpgrades.push({
+                      type: 'ability_group',
+                      key: groupId,
+                      recommendation,
+                      testResults: groupResult,
+                      percentageIncrease
+                    });
                   });
 
                   // Sort by highest percentage increase (descending)
@@ -2075,6 +2301,69 @@ export function CombatUpgradeAnalysisIframe({ character, rawCharacterData, comba
                                 {((recommendation.percentageIncrease as number) || 0) >= 0 ? '+' : ''}{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
                               </div>
                               <div className="text-blue-200 text-sm mb-1">
+                                {optimizeFor === 'profit'
+                                  ? formatChangeText((recommendation.profitIncrease as number) || 0, 'coins/day')
+                                  : formatChangeText((recommendation.experienceIncrease as number) || 0, 'exp/hr')
+                                }
+                              </div>
+                              {baselineResults && (
+                                <div className="text-yellow-300 text-sm font-medium">
+                                  Total: {optimizeFor === 'profit'
+                                    ? `${(baselineResults.profitPerDay + ((recommendation.profitIncrease as number) || 0)).toLocaleString()}/day`
+                                    : `${(baselineResults.experienceGain + ((recommendation.experienceIncrease as number) || 0)).toLocaleString()}/hr`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    } else if (upgrade.type === 'ability_group') {
+                      const recommendation = upgrade.recommendation;
+                      const groupAbilities = recommendation.abilities as Array<{ abilityHrid: string; level: number }>;
+
+                      return (
+                        <div key={`ability-group-${upgrade.key}`} className="bg-black/20 rounded-lg p-4 border border-purple-500/30">
+                          <div className="grid grid-cols-3 gap-4 items-start">
+                            {/* Column 1: Group Name and Abilities */}
+                            <div>
+                              <h5 className="text-white font-medium">{recommendation.groupName as string}</h5>
+                              <p className="text-purple-200 text-sm">Ability Group</p>
+                              <div className="mt-2 space-y-1">
+                                <p className="text-purple-200 text-xs font-medium">Abilities:</p>
+                                {groupAbilities.map((ability, idx) => {
+                                  const abilityInfo = ALL_ABILITIES.find(a => a.hrid === ability.abilityHrid);
+                                  const displayName = abilityInfo?.displayName || ability.abilityHrid.replace('/abilities/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                  return (
+                                    <div key={idx} className="text-purple-300 text-xs flex items-center gap-2">
+                                      <div className="w-4 h-4">
+                                        <AbilityIcon
+                                          abilityId={ability.abilityHrid.replace('/abilities/', '')}
+                                          size={16}
+                                          className="rounded border border-purple-400/50"
+                                        />
+                                      </div>
+                                      <span>{displayName} (Lv.{ability.level})</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Column 2: No Cost for Ability Groups */}
+                            <div className="text-center">
+                              <div className="text-gray-400 text-sm">Configuration Change</div>
+                              <div className="text-purple-300 text-xs mt-1">
+                                Switch to this ability setup
+                              </div>
+                            </div>
+
+                            {/* Column 3: Benefits and Total */}
+                            <div className="text-right">
+                              <div className="text-purple-300 font-bold mb-1">
+                                {((recommendation.percentageIncrease as number) || 0) >= 0 ? '+' : ''}{((recommendation.percentageIncrease as number) || 0).toFixed(1)}%
+                              </div>
+                              <div className="text-purple-200 text-sm mb-1">
                                 {optimizeFor === 'profit'
                                   ? formatChangeText((recommendation.profitIncrease as number) || 0, 'coins/day')
                                   : formatChangeText((recommendation.experienceIncrease as number) || 0, 'exp/hr')

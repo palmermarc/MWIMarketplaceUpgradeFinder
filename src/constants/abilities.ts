@@ -114,11 +114,14 @@ export const ABILITIES_BY_TYPE: AbilitiesByType = {
     createAbility('Insanity'),
     createAbility('Invincible'),
     createAbility('Fierce Aura'),
+    createAbility('Guardian Aura'),
+    createAbility('Mystic Aura'),
     createAbility('Aqua Aura'),
     createAbility('Sylvan Aura'),
     createAbility('Flame Aura'),
     createAbility('Speed Aura'),
-    createAbility('Critical Aura')
+    createAbility('Critical Aura'),
+    createAbility('Promote')
   ]
 };
 

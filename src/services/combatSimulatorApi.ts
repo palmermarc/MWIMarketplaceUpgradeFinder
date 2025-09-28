@@ -8,6 +8,7 @@ export interface UpgradeAnalysisRequest {
   equipmentOverrides?: { [slot: string]: string }; // For "Set another X" functionality
   abilityTargetLevels?: { [abilityHrid: string]: number };
   houseTargetLevels?: { [roomHrid: string]: number };
+  abilityGroups?: Array<Array<{ abilityHrid: string; level: number }>>;
 }
 
 
@@ -32,6 +33,7 @@ export interface StreamEvent {
   booksRequired?: number;
   costPerBook?: number;
   bookName?: string;
+  abilityName?: string;
   error?: string;
   testPlan?: {
     slot: string;
@@ -138,7 +140,8 @@ export class CombatSimulatorApiService {
           selectedLevels: request.selectedLevels,
           equipmentOverrides: request.equipmentOverrides,
           abilityTargetLevels: request.abilityTargetLevels,
-          houseTargetLevels: request.houseTargetLevels
+          houseTargetLevels: request.houseTargetLevels,
+          abilityGroups: request.abilityGroups
         }),
       });
 

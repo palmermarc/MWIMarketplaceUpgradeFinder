@@ -29,6 +29,14 @@ interface AbilityLevel {
 
 export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
   const { theme } = useTheme();
+
+  // Get border color based on theme
+  const getBorderColor = () => {
+    if (theme.mode === 'classic') {
+      return '#98a7e9';
+    }
+    return 'var(--color-midnight-400)';
+  };
   const [houseRooms, setHouseRooms] = useState<{ [roomHrid: string]: HouseRoom }>({});
   const [abilityLevels, setAbilityLevels] = useState<{ [abilityHrid: string]: AbilityLevel }>({});
   const [houseMaterialCosts, setHouseMaterialCosts] = useState<{ [roomHrid: string]: ItemCostCalculationResult }>({});
@@ -253,7 +261,7 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
   return (
     <div className="w-full">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white mb-2">💰 Calculate Costs</h2>
+        <h2 className="text-3xl font-bold text-white mb-2">💰 Calculate Costs</h2>
         <p className="text-blue-200">
           Calculate upgrade costs for equipment, abilities, and house improvements.
         </p>
@@ -261,14 +269,14 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
 
 
       {/* Houses Section */}
-      <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 mb-4">
-            <h4 className="text-md font-bold text-green-200 mb-3">🏠 Houses</h4>
+      <div className={`${theme.cardBackground} ${theme.borderColor} border rounded-lg p-4 mb-4`}>
+            <h4 className="text-2xl text-md font-bold text-green-200 mb-3">🏠 Houses</h4>
 
             {/* House Upgrade Costs Section */}
             {houseUpgradeCosts.length > 0 && (
               <div className="mb-6 space-y-4">
                 {houseUpgradeCosts.map((upgrade, index) => (
-                  <div key={index} className="bg-black/30 rounded-lg p-4 border border-green-500/30">
+                  <div key={index} className="bg-black/30 rounded-lg p-4 border" style={{ borderColor: getBorderColor() }}>
                     <h5 className="text-green-200 font-medium mb-3">
                       In order to raise <span className="text-white font-bold">{upgrade.roomName}</span> from level <span className="text-white font-bold">{upgrade.fromLevel}</span> to <span className="text-white font-bold">{upgrade.toLevel}</span>, it will require:
                     </h5>
@@ -341,13 +349,9 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
               {getOrderedHouseRooms().map(([roomHrid, room]) => (
                 <div
                   key={roomHrid}
-                  className="bg-black/20 rounded-lg p-3 border border-green-500/30 text-center"
+                  className="bg-black/20 rounded-lg p-3 text-center"
                 >
                   <div className="space-y-2">
-                    {/* House Name */}
-                    <h5 className="text-white font-medium capitalize text-sm">
-                      {parseHouseName(roomHrid)}
-                    </h5>
 
                     {/* House Icon */}
                     <div className="flex justify-center">
@@ -355,25 +359,27 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                         <SkillIcon
                           skillId={getHouseRoomIcon(roomHrid)}
                           size={40}
-                          className="rounded border border-green-400/50"
+                          className="rounded"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-300">
-                        Current: <span className="text-white">{room.currentLevel}</span>
-                      </div>
+                    {/* House Name */}
+                    <h5 className="text-white font-medium capitalize text-sm">
+                      {parseHouseName(roomHrid)} (Level {room.currentLevel})
+                    </h5>
 
+                    <div className="space-y-1">
                       <div className="space-y-1">
-                        <label className="text-xs text-gray-300">Target:</label>
+                        <label className="text-xs text-gray-300 px-2">Target:</label>
                         <input
                           type="number"
                           min="0"
                           max="8"
                           value={room.targetLevel}
                           onChange={(e) => updateHouseTarget(roomHrid, parseInt(e.target.value) || 0)}
-                          className="w-full px-2 py-1 bg-black/30 border border-green-500/50 rounded text-white text-xs focus:border-green-400 focus:outline-none"
+                          className="w-16 px-2 py-1 bg-black/30 border rounded text-white text-xs focus:border-green-400 focus:outline-none"
+                          style={{ borderColor: getBorderColor() }}
                         />
                       </div>
                     </div>
@@ -384,14 +390,14 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
           </div>
 
       {/* Abilities Section */}
-      <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
-            <h4 className="text-md font-bold text-blue-200 mb-3 text-center">⚡ Abilities</h4>
+      <div className={`${theme.cardBackground} ${theme.borderColor} border rounded-lg p-4 mb-4`}>
+            <h2 className="text-2xl text-md font-bold text-blue-200 mb-3 text-center">⚡ Abilities</h2>
 
             {/* Abilities Grid with Cost Information */}
             <div className="mb-6 overflow-x-auto">
               <div className="min-w-full">
                 {/* Header Row */}
-                <div className="grid grid-cols-5 gap-4 mb-4 text-sm font-medium text-blue-200 border-b border-blue-500/30 pb-2">
+                <div className="grid grid-cols-5 gap-4 mb-4 text-sm font-medium text-blue-200 border-b pb-2" style={{ borderBottomColor: getBorderColor() }}>
                   <div className="text-center">Ability</div>
                   <div className="text-center">Current → Target</div>
                   <div className="text-center">Books Required</div>
@@ -419,7 +425,8 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                     return (
                       <div
                         key={abilityInfo.hrid}
-                        className="grid grid-cols-5 gap-4 items-center bg-black/20 rounded-lg p-3 border border-blue-500/30"
+                        className="grid grid-cols-5 gap-4 items-center bg-black/20 rounded-lg p-3"
+                        style={{ borderColor: getBorderColor() }}
                       >
                         {/* Column 1: Ability Info */}
                         <div className="flex items-center gap-3">
@@ -448,7 +455,8 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                               max="200"
                               value={abilityLevel.targetLevel}
                               onChange={(e) => updateAbilityTarget(abilityInfo.hrid, parseInt(e.target.value) || abilityLevel.currentLevel)}
-                              className="w-16 px-2 py-1 bg-black/30 border border-blue-500/50 rounded text-white text-xs text-center focus:border-blue-400 focus:outline-none"
+                              className="w-16 px-2 py-1 bg-black/30 border rounded text-white text-xs text-center focus:border-blue-400 focus:outline-none"
+                              style={{ borderColor: getBorderColor() }}
                             />
                           </div>
                         </div>
@@ -508,6 +516,12 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+            {/* Disclaimer */}
+            <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-3 mb-4">
+              <div className="text-yellow-200 text-sm">
+                <strong>⚠️ Disclaimer:</strong> The calculator assumes that all books are bought at the cheapest price and that you&apos;re starting at 0% experience in your level. Check in-game with MWITools active for an exact count.
               </div>
             </div>
           </div>

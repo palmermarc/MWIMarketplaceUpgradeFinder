@@ -33,8 +33,7 @@ export function calculateMarketplaceCosts(
   items: Array<{ itemHrid: string; itemName: string; quantity: number }>,
   marketData?: MarketData | null
 ): ItemCostCalculationResult {
-  console.log('🏪 MARKETPLACE COST CALCULATOR: Starting calculation...');
-  console.log(`📋 Items to calculate: ${items.length}`);
+  // Starting marketplace cost calculation
 
   const result: ItemCostCalculationResult = {
     items: [],
@@ -44,18 +43,16 @@ export function calculateMarketplaceCosts(
   };
 
   if (!marketData) {
-    console.warn('⚠️ No marketplace data available for cost calculation');
+    // No marketplace data available for cost calculation
     result.hasAllPrices = false;
     result.unavailableItems = items.map(item => item.itemName);
     return result;
   }
 
-  console.log(`🛒 Marketplace data contains ${marketData.totalItems} items`);
+  // Processing marketplace data
 
   items.forEach((item, index) => {
-    console.log(`\n--- Processing Item ${index + 1}/${items.length} ---`);
-    console.log(`📦 Item: ${item.itemName} (${item.itemHrid})`);
-    console.log(`🔢 Quantity needed: ${item.quantity.toLocaleString()}`);
+    // Processing item
 
     // Find the item in marketplace data
     const marketplaceItem = marketData.items.find(marketItem => marketItem.itemHrid === item.itemHrid);
@@ -73,13 +70,11 @@ export function calculateMarketplaceCosts(
       itemResult.totalCost = Math.ceil(marketplaceItem.pricePerUnit * item.quantity);
       itemResult.available = true;
 
-      console.log(`✅ Found in marketplace!`);
-      console.log(`💰 Unit price: ${marketplaceItem.pricePerUnit.toLocaleString()} coins`);
-      console.log(`🧮 Calculation: ${marketplaceItem.pricePerUnit.toLocaleString()} × ${item.quantity.toLocaleString()} = ${itemResult.totalCost.toLocaleString()} coins`);
+      // Found in marketplace
 
       result.totalCost += itemResult.totalCost;
     } else {
-      console.log(`❌ Not available in marketplace or price is 0`);
+      // Not available in marketplace
       result.hasAllPrices = false;
       result.unavailableItems.push(item.itemName);
     }
@@ -87,14 +82,10 @@ export function calculateMarketplaceCosts(
     result.items.push(itemResult);
   });
 
-  console.log(`\n📊 FINAL CALCULATION SUMMARY:`);
-  console.log(`✅ Available items: ${result.items.filter(i => i.available).length}/${items.length}`);
-  console.log(`❌ Unavailable items: ${result.unavailableItems.length}`);
-  console.log(`💰 Total marketplace cost: ${result.totalCost.toLocaleString()} coins`);
-  console.log(`🎯 All prices available: ${result.hasAllPrices ? 'YES' : 'NO'}`);
+  // Final calculation summary complete
 
   if (result.unavailableItems.length > 0) {
-    console.log(`⚠️ Unavailable items: ${result.unavailableItems.join(', ')}`);
+    // Some items unavailable
   }
 
   return result;
@@ -110,7 +101,7 @@ export function calculateHouseMaterialCosts(
   materials: { [itemHrid: string]: { itemName: string; quantity: number } },
   marketData?: MarketData | null
 ): ItemCostCalculationResult {
-  console.log('\n🏠 HOUSE MATERIAL COST CALCULATOR: Starting...');
+  // Starting house material cost calculation
 
   const itemsArray = Object.entries(materials).map(([itemHrid, data]) => ({
     itemHrid,

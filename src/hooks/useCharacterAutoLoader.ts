@@ -46,7 +46,7 @@ export const useCharacterAutoLoader = () => {
       const sortedCharacters = characters.sort((a, b) => b.lastAccessed - a.lastAccessed);
       const mostRecent = sortedCharacters[0];
 
-      console.log(`🔄 Auto-loading most recent character: ${mostRecent.name} (last accessed: ${new Date(mostRecent.lastAccessed).toLocaleString()})`);
+      // Auto-loading most recent character
 
       // Note: lastAccessed is automatically updated when getCharacterData is called
 
@@ -60,7 +60,7 @@ export const useCharacterAutoLoader = () => {
       }));
 
     } catch (error) {
-      console.error('Failed to auto-load character:', error);
+      // Failed to auto-load character
       setState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to load character',

@@ -31,7 +31,9 @@
       "Read(//d/WebServer/react/bookmarks/**)",
       "Bash(git rm:*)",
       "Bash(cat:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "mcp__ide__executeCode"
     ],
     "deny": [],
     "ask": []

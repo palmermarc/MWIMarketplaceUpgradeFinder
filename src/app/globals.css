@@ -8,6 +8,9 @@
   --dark-blood-orange: #B50008;
   --dark-olive: #556b2f;
   --header-dark: #1a1a1a;
+  --color-midnight-900-opacity-25: rgba(13, 18, 39, 0.25);
+  --color-midnight-500-opacity-25: rgba(30, 41, 82, 0.25);
+  --color-midnight-400: rgba(30, 41, 82, 0.6);
 }
 
 @theme inline {
@@ -22,6 +25,9 @@
   --color-dark-blood-orange: var(--dark-blood-orange);
   --color-dark-olive: var(--dark-olive);
   --color-header-dark: var(--header-dark);
+  --color-midnight-900-opacity-25: var(--color-midnight-900-opacity-25);
+  --color-midnight-500-opacity-25: var(--color-midnight-500-opacity-25);
+  --color-midnight-400: var(--color-midnight-400);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,4 +41,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-roboto), Arial, Helvetica, sans-serif;
+}
+
+header button {
+  cursor: pointer;
 }

@@ -105,12 +105,12 @@ export class MarketplaceService {
 
       // If we have stored data and it's current, use it
       if (storedData && storedTimestamp && storedTimestamp >= apiTimestamp) {
-        console.log('Using cached marketplace data');
+        // Using cached marketplace data
         return storedData;
       }
 
       // Transform and store fresh data
-      console.log('Fetching fresh marketplace data');
+      // Fetching fresh marketplace data
       const transformedData = this.transformApiData(apiData);
       this.storeData(transformedData, apiTimestamp);
 
@@ -120,12 +120,12 @@ export class MarketplaceService {
 
       // Fall back to stored data if available
       if (storedData) {
-        console.warn('Using cached data due to fetch error');
+        // Using cached data due to fetch error
         return storedData;
       }
 
       // Return empty data if no stored data available
-      console.warn('No marketplace data available, returning empty data');
+      // No marketplace data available, returning empty data
       return {
         items: [],
         lastUpdated: new Date().toISOString(),
@@ -153,63 +153,29 @@ export class MarketplaceService {
       // Convert item name to itemHrid format (reverse of parseItemName)
       const itemHrid = `/items/${itemName.toLowerCase().replace(/ /g, '_')}`;
 
-      console.log(`🔍 MARKETPLACE SEARCH:`);
-      console.log(`   Input: itemName="${itemName}", enhancementLevel=${enhancementLevel}`);
-      console.log(`   Converted to: itemHrid="${itemHrid}"`);
-      console.log(`   Total marketplace items: ${marketData.items.length}`);
+      // Marketplace search initiated
 
       // Find matching items by itemHrid (ignore enhancement level first)
       const matchingItems = marketData.items.filter(item => item.itemHrid === itemHrid);
-      console.log(`   Items with matching itemHrid: ${matchingItems.length}`);
+      // Found matching items
 
       if (matchingItems.length > 0) {
-        console.log(`   Available enhancement levels for this item:`, matchingItems.map(item => `+${item.enhancementLevel} (${item.price.toLocaleString()}c)`).join(', '));
+        // Available enhancement levels found
 
-        // Show all matching items with full details
-        console.log(`   📋 All matching marketplace entries:`);
-        matchingItems.forEach((item, index) => {
-          console.log(`      [${index}] +${item.enhancementLevel}: ${item.price.toLocaleString()}c (itemHrid: "${item.itemHrid}", itemName: "${item.itemName}")`);
-        });
+        // All matching marketplace entries found
 
         // Now find the specific enhancement level
-        console.log(`   🎯 Looking for exact match: enhancementLevel === ${enhancementLevel}`);
-        const exactMatch = matchingItems.find(item => {
-          const isMatch = item.enhancementLevel === enhancementLevel;
-          console.log(`      Checking: ${item.enhancementLevel} === ${enhancementLevel} ? ${isMatch}`);
-          return isMatch;
-        });
+        const exactMatch = matchingItems.find(item => item.enhancementLevel === enhancementLevel);
 
         if (exactMatch) {
-          console.log(`💰 FOUND EXACT MATCH: ${exactMatch.price.toLocaleString()}c for ${itemName} +${enhancementLevel}`);
-          console.log(`   ✅ Match details:`, {
-            itemHrid: exactMatch.itemHrid,
-            itemName: exactMatch.itemName,
-            enhancementLevel: exactMatch.enhancementLevel,
-            price: exactMatch.price,
-            priceFormatted: exactMatch.price.toLocaleString() + 'c'
-          });
+          // Found exact match
           return exactMatch.price;
         } else {
-          console.log(`❌ ENHANCEMENT LEVEL NOT FOUND: ${itemName} +${enhancementLevel} (item exists but not at this level)`);
-          console.log(`   Available levels: ${matchingItems.map(item => item.enhancementLevel).sort((a, b) => a - b).join(', ')}`);
+          // Enhancement level not found
           return null;
         }
       } else {
-        console.log(`❌ ITEM NOT FOUND: No items found with itemHrid="${itemHrid}"`);
-
-        // Show a sample of available items for debugging
-        const sampleItems = marketData.items.slice(0, 10).map(item => `${item.itemHrid} +${item.enhancementLevel} (${item.price.toLocaleString()}c)`);
-        console.log(`   📋 Sample marketplace items (first 10):`, sampleItems);
-
-        // Show items with similar names for debugging
-        const similarItems = marketData.items
-          .filter(item => item.itemName.toLowerCase().includes(itemName.toLowerCase()) || item.itemHrid.toLowerCase().includes(itemName.toLowerCase()))
-          .slice(0, 5)
-          .map(item => `"${item.itemName}" (${item.itemHrid}) +${item.enhancementLevel}`);
-
-        if (similarItems.length > 0) {
-          console.log(`   🔍 Items with similar names:`, similarItems);
-        }
+        // Item not found in marketplace
 
         return null;
       }

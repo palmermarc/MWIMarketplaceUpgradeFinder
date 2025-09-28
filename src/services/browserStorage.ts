@@ -122,7 +122,7 @@ export class BrowserStorageService {
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('IndexedDB initialized successfully');
+        // IndexedDB initialized successfully
         resolve(request.result);
       };
 
@@ -139,7 +139,7 @@ export class BrowserStorageService {
    * Create object stores and indexes for the database
    */
   private createObjectStores(db: IDBDatabase, oldVersion: number) {
-    console.log(`Upgrading database from version ${oldVersion} to ${DB_VERSION}`);
+    // Upgrading database
 
     // Character Data Store
     if (!db.objectStoreNames.contains(STORES.CHARACTER_DATA)) {
@@ -221,7 +221,7 @@ export class BrowserStorageService {
     const store = transaction.objectStore(STORES.CHARACTER_DATA);
     await store.add(characterData);
 
-    console.log(`Character data saved with ID: ${id}`);
+    // Character data saved
     return id;
   }
 
@@ -277,7 +277,7 @@ export class BrowserStorageService {
       const transaction = await this.getTransaction(STORES.CHARACTER_DATA, 'readwrite');
       const store = transaction.objectStore(STORES.CHARACTER_DATA);
       await store.delete(id);
-      console.log(`Character ${id} deleted from storage`);
+      // Character deleted from storage
       return true;
     } catch (error) {
       console.error('Failed to delete character:', error);
@@ -311,7 +311,7 @@ export class BrowserStorageService {
 
     await store.add(storedData);
 
-    console.log(`Marketplace data saved with ID: ${id}, expires at: ${new Date(expiresAt).toISOString()}`);
+    // Marketplace data saved
     return id;
   }
 
@@ -363,7 +363,7 @@ export class BrowserStorageService {
           cursor.continue();
         } else {
           if (deletedCount > 0) {
-            console.log(`Cleaned up ${deletedCount} expired marketplace entries`);
+            // Cleaned up expired marketplace entries
           }
           resolve();
         }
@@ -390,7 +390,7 @@ export class BrowserStorageService {
     const store = transaction.objectStore(STORES.COMBAT_ITEMS);
     await store.add(storedData);
 
-    console.log(`Combat items saved with ID: ${id}`);
+    // Combat items saved
     return id;
   }
 
@@ -432,7 +432,7 @@ export class BrowserStorageService {
     const store = transaction.objectStore(STORES.USER_PREFERENCES);
     await store.put(userData); // Use put to update existing
 
-    console.log('User preferences saved');
+    // User preferences saved
     return id;
   }
 
@@ -462,7 +462,7 @@ export class BrowserStorageService {
     const store = transaction.objectStore(STORES.ANALYSIS_HISTORY);
     await store.add(historyEntry);
 
-    console.log(`Analysis history saved with ID: ${id}`);
+    // Analysis history saved
     return id;
   }
 
@@ -504,7 +504,7 @@ export class BrowserStorageService {
     });
 
     await Promise.all(promises);
-    console.log('All data cleared from storage');
+    // All data cleared from storage
   }
 
   /**
@@ -612,7 +612,7 @@ export class BrowserStorageService {
     // Cleanup expired marketplace data
     await this.cleanupExpiredMarketplaceData();
 
-    console.log(`Maintenance cleanup completed: ${charDeleted} character records, ${historyDeleted} history entries removed`);
+    // Maintenance cleanup completed
   }
 }
 
