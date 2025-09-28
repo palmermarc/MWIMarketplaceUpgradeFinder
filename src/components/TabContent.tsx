@@ -39,8 +39,7 @@ export function TabContent({
         return (
           <div className="w-full">
             {/* Welcome Introduction */}
-            <div className="max-w-5xl mx-auto mb-12">
-              <div className={`rounded-lg p-8 ${theme.cardBackground} ${theme.borderColor} border`}>
+              <div className={`max-w-7xl mx-auto p-8`}>
                 <h1 className={`text-4xl font-bold text-center mb-6 ${theme.textColor}`}>
                   Welcome to the Milky Way Idle Companion Tool
                 </h1>
@@ -49,47 +48,46 @@ export function TabContent({
                   Take your Milky Way Idle experience to the next level with this all-in-one companion app designed to save you time and optimize your progression.
                 </p>
 
-                <p className={`text-base mb-6 ${theme.textColor} max-w-4xl mx-auto opacity-85`}>
+                <p className={`text-lg mb-6 ${theme.textColor} max-w-4xl mx-auto opacity-85`}>
                   Import your character directly from the game and instantly access a powerful suite of tools built to streamline your journey:
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-8">
                   <div className={`p-5 rounded-lg ${theme.cardBackground} ${theme.borderColor} border`}>
-                    <h3 className={`text-lg font-semibold mb-2 ${theme.textColor}`}>
+                    <h3 className={`text-2xl font-semibold mb-2 ${theme.textColor}`}>
                       Combat Simulation
                     </h3>
-                    <p className={`text-sm ${theme.textColor} opacity-80 leading-relaxed`}>
+                    <p className={`text-base ${theme.textColor} opacity-80 leading-relaxed`}>
                       Test bulk item changes and evaluate upgrade potential without manually running each fight. Skip the spreadsheets—get clear results in seconds.
                     </p>
                   </div>
 
                   <div className={`p-5 rounded-lg ${theme.cardBackground} ${theme.borderColor} border`}>
-                    <h3 className={`text-lg font-semibold mb-2 ${theme.textColor}`}>
+                    <h3 className={`text-2xl font-semibold mb-2 ${theme.textColor}`}>
                       Abilities Calculator
                     </h3>
-                    <p className={`text-sm ${theme.textColor} opacity-80 leading-relaxed`}>
+                    <p className={`text-base ${theme.textColor} opacity-80 leading-relaxed`}>
                       Find out exactly how many ability books you&apos;ll need and estimate the total cost to reach your desired ability level.
                     </p>
                   </div>
 
                   <div className={`p-5 rounded-lg ${theme.cardBackground} ${theme.borderColor} border`}>
-                    <h3 className={`text-lg font-semibold mb-2 ${theme.textColor}`}>
+                    <h3 className={`text-2xl font-semibold mb-2 ${theme.textColor}`}>
                       Skills Leveling Planner
                     </h3>
-                    <p className={`text-sm ${theme.textColor} opacity-80 leading-relaxed`}>
+                    <p className={`text-base ${theme.textColor} opacity-80 leading-relaxed`}>
                       Enter your current and target skill levels to generate the most time-efficient strategy for leveling up—so you can plan smarter and play more efficiently.
                     </p>
                   </div>
                 </div>
 
-                <p className={`text-base text-center ${theme.textColor} max-w-4xl mx-auto leading-relaxed opacity-85`}>
+                <p className={`text-lg text-center ${theme.textColor} max-w-4xl mx-auto leading-relaxed opacity-85`}>
                   Whether you&apos;re fine-tuning your loadout or mapping out your long-term skill goals, this tool helps you make data-driven decisions and get the most out of every minute in-game.
                 </p>
               </div>
-            </div>
 
             {/* Character Import Section */}
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-7xl mx-auto">
               <CharacterImport
                 onCharacterImported={onCharacterImported || (() => {})}
                 onMarketDataLoaded={onMarketDataLoaded || (() => {})}
@@ -104,7 +102,7 @@ export function TabContent({
           return (
             <div className="w-full">
               <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-yellow-500/20 border border-yellow-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(55, 65, 81, 0.3)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
-                <h3 className={`text-lg font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
+                <h3 className={`text-2xl font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
                 <p className={`${theme.mode === 'dark' ? 'text-gray-300' : 'text-yellow-100'}`}>
                   Please import your character data first using the &quot;Import Character&quot; tab.
                 </p>
@@ -132,7 +130,7 @@ export function TabContent({
           return (
             <div className="w-full">
               <div className={`rounded-lg p-6 ${theme.mode === 'dark' ? 'border' : 'bg-yellow-500/20 border border-yellow-500/50'}`} style={theme.mode === 'dark' ? { backgroundColor: 'rgba(55, 65, 81, 0.3)', borderColor: 'rgba(181, 0, 8, 0.5)' } : {}}>
-                <h3 className={`text-lg font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
+                <h3 className={`text-2xl font-bold mb-2 ${theme.mode === 'dark' ? 'text-gray-200' : 'text-yellow-200'}`}>Character Required</h3>
                 <p className={`${theme.mode === 'dark' ? 'text-gray-300' : 'text-yellow-100'}`}>
                   Please import your character data first using the &quot;Import Character&quot; tab.
                 </p>

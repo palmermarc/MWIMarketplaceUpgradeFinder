@@ -205,12 +205,12 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
   };
 
   return (
-    <div className={`${theme.cardBackground} ${theme.borderColor} border rounded-lg p-8`}>
+    <div className={`p-8`}>
       <div className="space-y-6">
         {/* Stored Characters Section - moved to top */}
         {characterStorage.characters.length > 0 && (
           <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-green-200 mb-4">📂 Stored Characters</h3>
+            <h3 className="text-2xl font-bold text-green-200 mb-4">📂 Stored Characters</h3>
             <div className="space-y-3">
               {characterStorage.characters.slice(0, 5).map((storedChar) => (
                 <div
@@ -278,7 +278,7 @@ export function CharacterImport({ onCharacterImported, onMarketDataLoaded, onCom
         )}
 
         <div>
-          <label className={`block ${theme.textColor} text-center mb-2`}>
+          <label className={`block ${theme.textColor} text-2xl text-center mb-2`}>
             Paste your character JSON export:
           </label>
           <textarea

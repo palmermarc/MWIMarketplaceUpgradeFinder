@@ -33,7 +33,7 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
   // Get border color based on theme
   const getBorderColor = () => {
     if (theme.mode === 'classic') {
-      return '#98a7e9';
+      return 'rgba(152, 167, 233, 0.4)';
     }
     return 'var(--color-midnight-400)';
   };
@@ -259,7 +259,7 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
   }, [houseUpgradeCosts, marketData]);
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-7xl mx-auto">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-white mb-2">💰 Calculate Costs</h2>
         <p className="text-blue-200">
@@ -345,14 +345,17 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
               </div>
             )}
 
-            <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-6 gap-2">
               {getOrderedHouseRooms().map(([roomHrid, room]) => (
                 <div
                   key={roomHrid}
                   className="bg-black/20 rounded-lg p-3 text-center"
                 >
                   <div className="space-y-2">
-
+                    {/* House Name */}
+                    <h5 className="text-white font-medium capitalize text-sm">
+                      {parseHouseName(roomHrid)} (Level {room.currentLevel})
+                    </h5>
                     {/* House Icon */}
                     <div className="flex justify-center">
                       <div className="w-10 h-10">
@@ -363,11 +366,6 @@ export function CalculateCosts({ character, marketData }: CalculateCostsProps) {
                         />
                       </div>
                     </div>
-
-                    {/* House Name */}
-                    <h5 className="text-white font-medium capitalize text-sm">
-                      {parseHouseName(roomHrid)} (Level {room.currentLevel})
-                    </h5>
 
                     <div className="space-y-1">
                       <div className="space-y-1">
